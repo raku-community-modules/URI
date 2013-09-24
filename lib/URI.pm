@@ -118,7 +118,7 @@ submethod BUILD(:$!is_validating) {
 }
 
 method new(Str $uri_pos1?, Str :$uri, :$is_validating) {
-    my $obj = self.bless(*);
+    my $obj = self.bless;
 
     if $is_validating.defined {
         $obj.is_validating = ?$is_validating;

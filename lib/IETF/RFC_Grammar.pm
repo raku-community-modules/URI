@@ -47,6 +47,6 @@ method new(Str $rfc, $grammar?) {
         die "Need either rfc with known grammar or grammar";
     }
 
-   return self.bless(*, rfc => $rfc, grammar => $init_grammar);
+   return self.bless(rfc => $rfc, grammar => $init_grammar);
 }
 
