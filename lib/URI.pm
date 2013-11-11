@@ -88,7 +88,7 @@ our sub split_query(Str $query) {
         for (0, 1) -> $i { # could go past 1 in theory ...
             $qmap[ $i ] = uri_unescape($qmap[ $i ]);
         }
-        if %query_form.exists($qmap[0]) {
+        if %query_form{$qmap[0]}:exists {
             if %query_form{ $qmap[0] } ~~ Array  {
                 %query_form{ $qmap[0] }.push($qmap[1])
             }
