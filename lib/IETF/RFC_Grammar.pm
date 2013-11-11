@@ -34,9 +34,9 @@ method new(Str $rfc, $grammar?) {
 
     if (
         (! $init_grammar.can('parse'))  and
-        %rfc_grammar_build.exists($rfc)
+        %rfc_grammar_build{$rfc}:exists;
     ) {
-        unless %rfc_grammar.exists($rfc) {
+        unless %rfc_grammar{$rfc}:exists {
             my $module = %rfc_grammar_build{$rfc};
             require ::($module);
             %rfc_grammar{$rfc} = eval %rfc_grammar_build{$rfc};
