@@ -32,14 +32,15 @@ package URI::Escape {
     #     find first sequence of %[89ABCDEF]<.xdigit>
     #         use algorithm from url to determine if it's valid UTF-8
     sub uri_unescape(*@to_unesc, Bool :$no_utf8 = False) is export {
-
         my @rc = @to_unesc.map: {
             .trans('+' => ' ')\
-            .subst(:g, / '%' (<.xdigit> ** 2 ) /, -> $/ {
-                :16(~$0).chr;
+            .subst(:g, / [ '%' (<.xdigit> ** 2 ) ]+ /, -> $/ {
+                $no_utf8
+                    ?? join('', $0.map({ :16(~$_).chr }))
+                    !! Buf.new($0.map({ :16(~$_) })).decode('UTF-8')
             })
-        }
-        @rc.=map(*.encode('latin-1').decode('UTF-8')) unless $no_utf8;
+        };
+
         return do given @rc.elems { # this might be simplified some day
             when 0 { Nil }
             when 1 { @rc[0] }
