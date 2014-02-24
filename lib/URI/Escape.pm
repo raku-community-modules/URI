@@ -20,7 +20,7 @@ package URI::Escape {
         return $s unless defined $s;
         $s.subst(:g, rx/<- [!*'()\-._~A..Za..z0..9]>/,
             {
-                ( $no_utf8 || not 0x80 +& ord(.Str) ) ?? %escapes{ .Str } !!
+                ( $no_utf8 || .Str.ord < 128 ) ?? %escapes{ .Str } !!
                     # as unpack progresses the line below can improve ...
                     '%' ~ .Str.encode.unpack('H*').uc.comb(/../).join('%')
             }
