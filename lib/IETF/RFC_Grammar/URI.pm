@@ -17,19 +17,19 @@ grammar IETF::RFC_Grammar::URI is IETF::RFC_Grammar::IPv6 {
         <relative_part> [ '?' <query> ]? [ '#' <fragment> ]?
     };
     token relative_part     {
-        '//' <authority> <path_abempty>     |
-        <path_absolute>                     |
-        <path_noscheme>                     |
-        <path_empty>
+        | <?[/]> '//' <authority> <path_abempty>
+        | <path_absolute>
+        | <path_noscheme>
+        | <path_empty>
     };
 
     token relative_ref_non_empty      {
         <relative_part_non_empty> [ '?' <query> ]? [ '#' <fragment> ]?
     };
     token relative_part_non_empty     {
-        '//' <authority> <path_abempty>     |
-        <path_absolute>                     |
-        <path_noscheme>                     
+        | <?[/]> '//' <authority> <path_abempty>
+        | <path_absolute>
+        | <path_noscheme>
     };
 
     token URI               {
@@ -37,10 +37,10 @@ grammar IETF::RFC_Grammar::URI is IETF::RFC_Grammar::IPv6 {
     };
 
     token hier_part     {
-        '//' <authority> <path_abempty>     |
-        <path_absolute>                     |
-        <path_rootless>                     |
-        <path_empty>
+        | '//' <authority> <path_abempty>
+        | <path_absolute>
+        | <path_rootless>
+        | <path_empty>
     };
 
     token scheme            { <.uri_alpha> <[\-+.] +uri_alpha +digit>* };
