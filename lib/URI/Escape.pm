@@ -4,7 +4,7 @@ package URI::Escape {
 
     use IETF::RFC_Grammar::URI;
 
-    my %escapes = (^256).map: {
+    my %escapes = (^256).for: {
         ;
         .chr => sprintf '%%%02X', $_
     };
@@ -31,12 +31,12 @@ package URI::Escape {
     #     find first sequence of %[89ABCDEF]<.xdigit>
     #         use algorithm from url to determine if it's valid UTF-8
     sub uri_unescape(*@to_unesc, Bool :$no_utf8 = False) is export {
-        my @rc = @to_unesc.map: {
+        my @rc = @to_unesc.for: {
             .trans('+' => ' ')\
             .subst(:g, / [ '%' (<.xdigit> ** 2 ) ]+ /, -> $/ {
                 $no_utf8
-                    ?? join('', $0.map({ :16(~$_).chr }))
-                    !! Buf.new($0.map({ :16(~$_) })).decode('UTF-8')
+                    ?? join('', $0.for({ :16(~$_).chr }))
+                    !! Buf.new($0.for({ :16(~$_) })).decode('UTF-8')
             })
         };
 
