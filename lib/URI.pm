@@ -147,7 +147,7 @@ method host {
 }
 
 method default_port {
-    URI::DefaultPort::scheme_port($.scheme)
+    URI::DefaultPort::_scheme_port($.scheme)
 }
 
 method _port {
