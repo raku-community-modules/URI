@@ -27,7 +27,7 @@ method parse (Str $str) {
 
     $!uri = $!path = $!is_absolute = $!scheme = $!authority = $!query =
         $!frag = Mu;
-    %!query_form = @!segments = Empty;
+    %!query_form = @!segments = ();
 
     try {
         if ($.is_validating) {
