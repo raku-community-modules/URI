@@ -147,7 +147,7 @@ method host {
 }
 
 method default_port {
-    URI::DefaultPort::scheme_port($.scheme)
+    URI::DefaultPort::_scheme_port($.scheme)
 }
 
 method _port {
@@ -187,7 +187,7 @@ method frag {
 
 method fragment { $.frag }
 
-method Str() {
+method gist() {
     my $str;
     $str ~= $.scheme if $.scheme;
     $str ~= '://' ~ $.authority if $.authority;
@@ -195,6 +195,10 @@ method Str() {
     $str ~= '?' ~ $.query if $.query;
     $str ~= '#' ~ $.frag if $.frag;
     return $str;
+}
+
+method Str() {
+    return $.gist 
 }
 
 # chunks now strongly deprecated
