@@ -1,4 +1,4 @@
-class URI;
+unit class URI;
 
 use IETF::RFC_Grammar;
 use IETF::RFC_Grammar::URI;
@@ -27,7 +27,7 @@ method parse (Str $str) {
 
     $!uri = $!path = $!is_absolute = $!scheme = $!authority = $!query =
         $!frag = Mu;
-    %!query_form = @!segments = Nil;
+    %!query_form = @!segments = ();
 
     try {
         if ($.is_validating) {
@@ -223,7 +223,7 @@ method query_form {
 
 URI — Uniform Resource Identifiers (absolute and relative)
 
-=head SYNOPSYS
+=head SYNOPSIS
 
     use URI;
     my $u = URI.new('http://her.com/foo/bar?tag=woow#bla');

@@ -18,7 +18,7 @@ C<URI::DefaultPort> Default ports for URI schemes.
 
 use IETF::RFC_Grammar::URI;
 
-module URI::DefaultPort;
+unit module URI::DefaultPort;
 
 # Uncommenting constant waiting on RT 121296
 my Int #`(constant) %default_port{ Str } = (
