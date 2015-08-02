@@ -1,6 +1,6 @@
 use v6;
 use Test;
-plan 48;
+plan 42;
 
 use URI;
 ok(1,'We use URI and we are still alive');
@@ -32,16 +32,9 @@ is($u.port, 443, 'default https port');
 ok(! $u._port.defined, 'no specified port');
 
 $u.parse('/foo/bar/baz');
-
 is($u.segments, 'foo bar baz', 'segments from absolute path');
-ok($u.absolute, 'absolute path');
-nok($u.relative, 'not relative path');
-
 $u.parse('foo/bar/baz');
-
 is($u.segments, 'foo bar baz', 'segements from relative path');
-ok( $u.relative, 'relative path');
-nok($u.absolute, 'not absolute path');
 
 is($u.segments[0], 'foo', 'first segment');
 is($u.segments[1], 'bar', 'second segment');
@@ -50,10 +43,7 @@ is($u.segments[*-1], 'baz', 'last segment');
 # actual uri parameter not required
 $u = URI.new;
 $u.parse('http://foo.com');
-
 ok($u.segments == 1 && $u.segments[0] eq '', ".segments return [''] for empty path");
-ok($u.absolute, 'http://foo.com has an absolute path');
-nok($u.relative, 'http://foo.com does not have a relative path');
 is($u.port, 80, 'default http port');
 
 # test URI parsing with <> or "" and spaces
