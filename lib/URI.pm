@@ -199,14 +199,18 @@ method frag {
 
 method fragment { $.frag }
 
+method gist() {
+    my Str $s;
+    $s ~= $.scheme if $.scheme;
+    $s ~= '://' ~ $.authority if $.authority;
+    $s ~= $.path;
+    $s ~= '?' ~ $.query if $.query;
+    $s ~= '#' ~ $.frag if $.frag;
+    return $s;
+}
+
 method Str() {
-    my $str;
-    $str ~= $.scheme if $.scheme;
-    $str ~= '://' ~ $.authority if $.authority;
-    $str ~= $.path;
-    $str ~= '?' ~ $.query if $.query;
-    $str ~= '#' ~ $.frag if $.frag;
-    return $str;
+    return $.gist;
 }
 
 # chunks now strongly deprecated
