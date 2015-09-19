@@ -14,7 +14,7 @@ is($u.port, '80', 'port');
 is($u.path, '/about/us', 'path');
 is($u.query, 'foo', 'query');
 is($u.frag, 'bar', 'frag');
-is($u.segments, 'about us', 'segements');
+is($u.segments, 'about us', 'segments');
 is($u.segments[0], 'about', 'first chunk');
 is($u.segments[1], 'us', 'second chunk');
 
@@ -45,7 +45,7 @@ ok(! $u._port.defined, 'no specified port');
 $u.parse('/foo/bar/baz');
 is($u.segments, 'foo bar baz', 'segments from absolute path');
 $u.parse('foo/bar/baz');
-is($u.segments, 'foo bar baz', 'segements from relative path');
+is($u.segments, 'foo bar baz', 'segments from relative path');
 
 is($u.segments[0], 'foo', 'first segment');
 is($u.segments[1], 'bar', 'second segment');
@@ -64,18 +64,18 @@ is("$u", 'http://foo.com', '<> removed from str');
 $u.parse(' "http://foo.com"');
 is("$u", 'http://foo.com', '"" removed from str');
 my $host_in_grammar =
-    $u.grammar.parse_result<URI_reference><URI><hier_part><authority><host>;
+    $u.grammar.parse_result<URI-reference><URI><hier-part><authority><host>;
 ok(! $host_in_grammar<IPv4address>.defined, 'grammar detected host not ip'
 );
-is($host_in_grammar<reg_name>, 'foo.com', 'grammar detected registered domain style');
+is($host_in_grammar<reg-name>, 'foo.com', 'grammar detected registered domain style');
 
 $u.parse('http://10.0.0.1');
 is($u.host, '10.0.0.1', 'numeric host');
 $host_in_grammar =
-    $u.grammar.parse_result<URI_reference><URI><hier_part><authority><host>;
+    $u.grammar.parse_result<URI-reference><URI><hier-part><authority><host>;
 
 is($host_in_grammar<IPv4address>, '10.0.0.1', 'grammar detected ipv4');
-ok(! $host_in_grammar<reg_name>.defined, 'grammar detected no registered domain style');
+ok(! $host_in_grammar<reg-name>.defined, 'grammar detected no registered domain style');
 
 $u.parse('http://example.com:80/about?foo=cod&bell=bob#bar');
 is($u.query, 'foo=cod&bell=bob', 'query with form params');
@@ -98,7 +98,7 @@ is($u.query_form<foo>[1], 'trout', 'query param foo - el 2 relative path without
 
 my ($url_1_valid, $url_2_valid) = (1, 1);
 try {
-    my $u_v = URI.new('http:://www.perl.com', :is_validating<1>);
+    my $u_v = URI.new('http://www.perl.com', :is_validating<1>);
     is($url_1_valid, 1, 'validating parser okd good URI');
     $u_v = URI.new('http:://?#?#', :is_validating<1>);
     CATCH {
