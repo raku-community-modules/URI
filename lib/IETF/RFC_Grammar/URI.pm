@@ -72,9 +72,9 @@ token path-noscheme     { <segment-nz-nc> [ '/' <segment> ]* };
 token path-rootless     { <segment-nz> [ '/' <segment> ]* };
 token path-empty        { <.pchar> ** 0 }; # yes - zero characters
 
-token   segment         { <.pchar>* };
-token   segment-nz      { <.pchar>+ };
-token   segment-nz-nc   { [ <+unenc-pchar - [:]> | <.pct-encoded> ] + };
+token segment         { <.pchar>* };
+token segment-nz      { <.pchar>+ };
+token segment-nz-nc   { [ <+unenc-pchar - [:]> | <.pct-encoded> ] + };
 
 token query             { <.fragment> };
 token fragment          { [ <[/?] +unenc-pchar> | <.pct-encoded> ]* };
