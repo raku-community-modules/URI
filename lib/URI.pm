@@ -160,6 +160,10 @@ method port {
     $._port // $.default_port;
 }
 
+method userinfo {
+    return ~($!authority<userinfo> || '');
+}
+
 method path {
     return ~($!path || '');
 }
@@ -191,7 +195,6 @@ method query {
 method path_query {
     $.query ?? $.path ~ '?' ~ $.query !! $.path
 }
-
 
 method frag {
     return ~($!frag || '').lc;
