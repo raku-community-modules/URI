@@ -1,9 +1,11 @@
 use v6;
 use Test;
-plan 43;
+plan 44;
 
 use URI;
-ok(1,'We use URI and we are still alive');
+use URI::Escape;
+
+ok(1,'We use URI et. al and we are still alive');
 
 my $u = URI.new('http://example.com:80/about/us?foo#bar');
 
@@ -108,5 +110,11 @@ try {
 is($url_2_valid, 0, 'validating parser rejected bad URI');
 
 nok(URI.new('foo://bar.com').port, '.port without default value lives');
+
+my Str $user-info = URI.new(
+    'http://user%2Cn:deprecatedpwd@obscurity.com:8080/ucantcme'
+).userinfo,
+is( uri_unescape($user-info), 'user,n:deprecatedpwd',
+    'extracted userinfo correctly');
 
 # vim:ft=perl6
