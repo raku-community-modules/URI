@@ -11,7 +11,7 @@ my %escapes = (^256).flatmap: {
 # line below may work and be useful when fix RT #126252
 #   my token escape_unreserved {<IETF::RFC_Grammar::URI::unreserved>};
 
-sub uri_escape(Str $s, Bool :$no_utf8 = False) is export {
+sub uri_escape($s, Bool :$no_utf8 = False) is export {
     $s // return $s;
     $s.subst(:g, /<- [\-._~A..Za..z0..9]>/,
         {
