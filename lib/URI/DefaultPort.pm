@@ -33,7 +33,7 @@ my Int %default_port = (
     git     =>      9418
 );
     
-our sub scheme_port(Str $scheme) {
+our sub scheme-port(Str $scheme) {
     return %default_port{$scheme};
 }
 
