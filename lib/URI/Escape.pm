@@ -54,7 +54,7 @@ sub uri_unescape(*@to_unesc, Bool :$no_utf8 = False) is export {
 
 URI::Escape - Escape and unescape unsafe characters
 
-=head SYNOPSYS
+=head SYNOPSIS
 
     use URI::Escape;
     
