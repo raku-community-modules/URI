@@ -58,8 +58,8 @@ URI::Escape - Escape and unescape unsafe characters
 
     use URI::Escape;
     
-    my $escaped = uri_escape("10% is enough\n");
-    my $un_escaped = uri_unescape('10%25%20is%20enough%0A');
+    my $escaped = uri-escape("10% is enough\n");
+    my $un_escaped = uri-unescape('10%25%20is%20enough%0A');
 
 =end pod
 
