@@ -4,6 +4,7 @@ branches:
 language: perl6
 perl6:
   - latest
+  - 2015.09
 install:
   - rakudobrew build-panda
 
