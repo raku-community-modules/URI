@@ -20,3 +20,7 @@ character numbering.
     use URI::Escape;
     my $escaped = uri-escape("10% is enough\n");
     my $un-escaped = uri-unescape('10%25%20is%20enough%0A'); 
+
+###Status
+[![Build Status](https://travis-ci.org/perl6-community-modules/uri.png)](https://travis-ci.org/perl6-community-modules/uri)
+
