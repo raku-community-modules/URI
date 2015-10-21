@@ -29,7 +29,7 @@ method parse_validating($parse_str) {
 
 submethod BUILD(:$!rfc, :$!grammar) {}
 
-method new(Str $rfc, $grammar?) {
+method new(Str $rfc, $grammar = ::('IETF::RFC_Grammar::URI')) {
     my $init_grammar = $grammar;
 
     if (
