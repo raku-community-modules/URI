@@ -162,7 +162,7 @@ method _port {
 }
 
 method port {
-    $._port // $.default_port;
+    $._port // $.default-port;
 }
 
 method userinfo {
