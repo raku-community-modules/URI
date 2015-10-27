@@ -29,7 +29,7 @@ method parse_validating($parse_str) {
 
 submethod BUILD(:$!rfc, :$!grammar) {}
 
-method new(Str $rfc, $grammar = ::('IETF::RFC_Grammar::URI')) {
+method new(Str $rfc, $grammar?) {
     my $init_grammar = $grammar;
 
     if (
@@ -38,8 +38,9 @@ method new(Str $rfc, $grammar = ::('IETF::RFC_Grammar::URI')) {
     ) {
         unless %rfc_grammar{$rfc}:exists {
             my $module = %rfc_grammar_build{$rfc};
-            require ::($module);
-            %rfc_grammar{$rfc} = EVAL %rfc_grammar_build{$rfc};
+            # less disruptive fix to RT126390
+            unless ($rfc eq 'rfc3986') { require ::($module); }
+            %rfc_grammar{$rfc} = ::($module);
         }
         $init_grammar = %rfc_grammar{$rfc};
     }
