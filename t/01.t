@@ -105,7 +105,7 @@ throws-like {URI.new('http:://?#?#')}, X::URI::Invalid,
 my $uri-w-js = 'http://example.com } function(var mm){ alert(mm) }';
 throws-like {URI.new($uri-w-js)}, X::URI::Invalid,
     'URI followed by trailing javascript raises exception';
-my $uri-pfx = URI.new($uri-w-js, match-prefix => True);
+my $uri-pfx = URI.new($uri-w-js, :match-prefix);
 is(~$uri-pfx, 'http://example.com', 'Pulled of prefix URI');
 nok(URI.new('foo://bar.com').port, '.port without default value lives');
 lives-ok { URI.new('/foo/bar').port }, '.port on relative URI lives';

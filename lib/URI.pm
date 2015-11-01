@@ -119,18 +119,19 @@ method init ($str) {
 }
 
 # new can pass alternate grammars some day ...
-submethod BUILD(Bool :$!match-prefix) {
+submethod BUILD(:$match-prefix) {
+    $!match-prefix = ? $match-prefix;
     $!grammar = IETF::RFC_Grammar.new('rfc3986');
 }
 
-multi method new(Str $uri, Bool :$match-prefix) {
+multi method new(Str $uri, :$match-prefix) {
     my $obj = self.bless(:$match-prefix);
 
     $obj.parse($uri) if $uri.defined;
     return $obj;
 }
 
-multi method new(Str :$uri, Bool :$match-prefix) {
+multi method new(Str :$uri, :$match-prefix) {
     return self.new($uri, :$match-prefix);
 }
 
