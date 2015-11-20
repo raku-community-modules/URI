@@ -88,7 +88,7 @@ our sub split-query(Str $query) {
 
     for map { [split(/<[=]>/, $_) ]}, split(/<[&;]>/, $query) -> $qmap {
         for (0, 1) -> $i { # could go past 1 in theory ...
-            $qmap[ $i ] = uri_unescape($qmap[ $i ]);
+            $qmap[ $i ] = uri-unescape($qmap[ $i ]);
         }
         if %query_form{$qmap[0]}:exists {
             if %query_form{ $qmap[0] } ~~ Array  {
@@ -136,15 +136,15 @@ multi method new(Str :$uri, :$match-prefix) {
 }
 
 method scheme {
-    return ~($!scheme || '').lc;
+    return ($!scheme // '').lc;
 }
 
 method authority {
-    return ~$!authority.lc;
+    return ($!authority // '').lc;
 }
 
 method host {
-    return ($!authority<host> || '').lc;
+    return ($!authority<host> // '').lc;
 }
 
 method default-port {
@@ -163,11 +163,11 @@ method port {
 }
 
 method userinfo {
-    return ~($!authority<userinfo> || '');
+    return ~($!authority<userinfo> // '');
 }
 
 method path {
-    return ~($!path || '');
+    return ~($!path // '');
 }
 
 my $warn-deprecate-abs-rel = q:to/WARN-END/;
@@ -191,7 +191,7 @@ method relative {
 }
 
 method query {
-    item ~($!query || '');
+    item ~($!query // '');
 }
 
 method path-query {
@@ -200,7 +200,7 @@ method path-query {
 method path_query { $.path-query } #artifact form
 
 method frag {
-    return ~($!frag || '').lc;
+    return ($!frag // '').lc;
 }
 
 method fragment { $.frag }

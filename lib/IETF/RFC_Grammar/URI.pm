@@ -8,7 +8,7 @@ use v6;
 
 use IETF::RFC_Grammar::IPv6;
 
-unit grammar IETF::RFC_Grammar::URI:version<0.02> is IETF::RFC_Grammar::IPv6;
+unit grammar IETF::RFC_Grammar::URI:ver<0.02> is IETF::RFC_Grammar::IPv6;
 
 token TOP               { <URI-reference> };
 token TOP-non-empty     { <URI> | <relative-ref-non-empty> };
