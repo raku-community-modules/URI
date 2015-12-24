@@ -3,7 +3,6 @@ use v6;
 unit package URI::Escape;
 
 use IETF::RFC_Grammar::URI;
-use experimental :pack;
 
 my %escapes = (^256).flatmap: {
     .chr => sprintf '%%%02X', $_
@@ -17,8 +16,7 @@ sub uri-escape($s, Bool :$no-utf8 = False) is export {
     $s.subst(:g, /<- [\-._~A..Za..z0..9]>/,
         {
             ( $no-utf8 || .Str.ord < 128 ) ?? %escapes{ .Str } !!
-                # as unpack progresses the line below can improve ...
-                '%' ~ .Str.encode.unpack('H*').uc.comb(/../).join('%')
+                .Str.encode.list.fmt('%%%X', "")
         }
     );
 }
