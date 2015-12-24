@@ -3,6 +3,7 @@ use v6;
 unit package URI::Escape;
 
 use IETF::RFC_Grammar::URI;
+use experimental :pack;
 
 my %escapes = (^256).flatmap: {
     .chr => sprintf '%%%02X', $_
