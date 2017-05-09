@@ -45,11 +45,11 @@ our subset Path of Str
 
 has $.grammar;
 has Bool $.match-prefix = False;
-has Path $.path is rw = '';
+has Path $.path = '';
 has $!is_absolute;  # part of deprecated code scheduled for removal
 has Scheme $.scheme is rw = '';
 has Userinfo $.userinfo is rw = '';
-has Host $.host is rw = '';
+has Host $.host = '';
 has Port $._port is rw;
 has $!query;
 has $!frag;
@@ -101,17 +101,8 @@ method parse (Str $str, :$match-prefix) {
     $!host        = "$authority<host>".lc || '';
     $!_port       = .Int with $authority<port>;
 
-    my $path = $comp_container<path-abempty>       ||
-               $comp_container<path-absolute>      ;
-    $!is_absolute = ?($!path || $!scheme); # part of deprecated code
-
-    $path ||=  $comp_container<path-noscheme>      ||
-               $comp_container<path-rootless>      ;
-
-    $!path = "$path" with $path;
-
-    # we share code with the path mutator
-    self!segmentize($path);
+    # share code with the path mutator
+    self!make-path($comp_container);
 
     try {
         %!query_form = split_query( ~$!query ) if $!query;
@@ -175,28 +166,30 @@ multi method new(Str :$uri, :$match-prefix) {
     return self.new($uri, :$match-prefix);
 }
 
-method authority returns Authority is rw {
+multi method authority(URI:D:) returns Authority:D {
     my $authority = '';
     $authority ~= "$!userinfo@" if $!userinfo;
     $authority ~= $!host // '';
     $authority ~= ":$!_port" if $!_port;
+    $authority;
+}
 
-    sub _set($auth-comp) {
-        my $comp = $auth-comp<IETF::RFC_Grammar::URI::authority>;
-        $!userinfo = '';
-        $!_port    = Nil;
+multi method authority(URI:D: Authority:D $new) {
+    $!userinfo = '';
+    $!_port    = Nil;
 
-        $!userinfo = .Str with $comp<userinfo>;
-        $!host     = "$comp<host>".lc // '';
-        $!_port    = .Int with $comp<port>;
+    if $new ~~ /
+        $<authority> = <IETF::RFC_Grammar::URI::authority>
+    / -> $comp {
+        $!userinfo = .Str with $comp<authority><userinfo>;
+        $!host     = ($comp<authority><host> // '').Str.lc;
+        $!_port    = .Int with $comp<authority><port>;
+    }
+    else {
+        $!host = '';
     }
 
-    Proxy.new:
-        FETCH => method ()   { $authority },
-        STORE => method (Authority $a) {
-            _set($a ~~ /<IETF::RFC_Grammar::URI::authority>/);
-        },
-        ;
+    return;
 }
 
 method default-port {
@@ -204,34 +197,67 @@ method default-port {
 }
 method default_port { $.default-port() } # artifact form
 
-method port is rw {
-    my Port $_port := $!_port;
-    my $default-port = $.default-port;
+multi method port(URI:D:) returns Port { $!_port // $.default-port }
 
-    Proxy.new:
-        FETCH => method ()   { $_port // $default-port },
-        STORE => method ($p) { $_port = $p },
-        ;
+multi method port(URI:D: Port $new) {
+    $!_port = $new;
 }
 
-method !segmentize($path) {
-    @!segments := $path<segment>.list.map({.Str}).list || ('');
+multi method port(URI:D: Nil) {
+    $!_port = Nil;
+}
+
+my regex URI-paths {
+    ^ [
+            $<path-abempty> = <IETF::RFC_Grammar::URI::path-abempty>
+        |   $<path-absolute> = <IETF::RFC_Grammar::URI::path-absolute>
+        |   $<path-rootless> = <IETF::RFC_Grammar::URI::path-rootless>
+        |   $<path-empty> = <IETF::RFC_Grammar::URI::path-empty>
+    ] $
+}
+my regex relative-ref-paths {
+    ^ [
+            $<path-abempty> = <IETF::RFC_Grammar::URI::path-abempty>
+        |   $<path-absolute> = <IETF::RFC_Grammar::URI::path-absolute>
+        |   $<path-noscheme> = <IETF::RFC_Grammar::URI::path-noscheme>
+        |   $<path-empty> = <IETF::RFC_Grammar::URI::path-empty>
+    ] $
+}
+
+method !make-path($comp_container) {
+    my $path = $comp_container<path-abempty>       ||
+               $comp_container<path-absolute>      ;
+    $!is_absolute = ?($path || $!scheme); # part of deprecated code
+
+    $path ||=  $comp_container<path-noscheme>      ||
+               $comp_container<path-rootless>      ;
+
+    $!path = "$path" with $path;
+
+    @!segments := $path<segment>.list.map({.Str}).list || ('',);
     if my $first_chunk = $path<segment-nz-nc> || $path<segment-nz> {
         @!segments := ($first_chunk, |@!segments);
     }
     if @!segments.elems == 0 {
-        @!segments := ('');
+        @!segments := ('',);
     }
 }
 
-# method path is rw {
-#     my $get-path := $!path;
-#     my sub _set($path) {
-#         self!segmentize($path<segment>);
-#     }
-#
-#
-# }
+multi method path(URI:D:) returns Path:D { $!path }
+
+multi method path(URI:D: Path:D $new) {
+    # Scheme implies a <URI> parse, no scheme <relative-ref>
+    my &path-regex := $!scheme ?? &URI-paths !! &relative-ref-paths;
+
+    if $new ~~ &path-regex -> $comp {
+        self!make-path($comp);
+    }
+    else {
+        X::URI::Invalid.new(
+            source => self!gister(path => $new),
+        ).throw
+    }
+}
 
 my $warn-deprecate-abs-rel = q:to/WARN-END/;
     The absolute and relative methods are artifacts carried over from an old
@@ -268,14 +294,24 @@ method frag {
 
 method fragment { $.frag }
 
-method gist() {
+method !gister(
+    :$scheme = $.scheme,
+    :$authority = $.authority,
+    :$path = $.path,
+    :$query = $.query,
+    :$frag = $.frag,
+) {
     my Str $s;
-    $s ~= $.scheme if $.scheme;
-    $s ~= '://' ~ $.authority if $.authority;
-    $s ~= $.path;
-    $s ~= '?' ~ $.query if $.query;
-    $s ~= '#' ~ $.frag if $.frag;
+    $s ~= $scheme if $scheme;
+    $s ~= '://' ~ $authority if $authority;
+    $s ~= $path;
+    $s ~= '?' ~ $query if $query;
+    $s ~= '#' ~ $frag if $frag;
     return $s;
+}
+
+method gist() {
+    self!gister
 }
 
 method Str() {
