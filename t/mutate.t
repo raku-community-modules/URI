@@ -51,10 +51,25 @@ is "$u", 'https://example.com/careers/are/good?foo=cod&foo=trout#bar', 'setting 
 is $u.query-form<foo>[0], 'cod', 'query form foo.0 is good';
 is $u.query-form<foo>[1], 'trout', 'query form foo.1 is good';
 
+throws-like {
+    $u.query-form<foo>[0] = 'bad stuff';
+}, X::Assignment::RO, 'cannot set query-form<>[] because it is immutable';
+
+throws-like {
+    $u.query-form<foo> = 'bad stuff';
+}, X::Assignment::RO, 'cannot set query-form<> because it is immutable';
+
 $u.query-form('bar' => 'lion', 'bar' => 'tiger');
 is "$u", 'https://example.com/careers/are/good?bar=lion&bar=tiger#bar', 'setting query-form works';
 is $u.query-form<bar>[0], 'lion', 'query form bar.0 is good';
 is $u.query-form<bar>[1], 'tiger', 'query form bar.1 is good';
 
+throws-like {
+    $u.query-form<bar>[0] = 'bad stuff';
+}, X::Assignment::RO, 'cannot set query-form<>[] because it is immutable';
+
+throws-like {
+    $u.query-form<bar> = 'bad stuff';
+}, X::Assignment::RO, 'cannot set query-form<> because it is immutable';
 
 done-testing;
