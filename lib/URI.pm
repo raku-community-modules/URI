@@ -26,11 +26,44 @@ our subset Host of Str
         || <IETF::RFC_Grammar::URI::host>
     ] $/;
 our subset Port of UInt;
-our subset Authority of Str
-    where /^ [
-           ''
-        || <IETF::RFC_Grammar::URI::authority>
-    ] $/;
+
+class X::URI::Authority::Invalid is Exception {
+    has $.source;
+    method message { "Could not parse authority: $!source" }
+}
+
+class Authority {
+    has Userinfo $.userinfo is rw = '';
+    has Host $.host is required;
+    has Port $.port is rw;
+
+    multi method new(Authority:U: IETF::RFC_Grammar:D $grammar, Str:D $authority) {
+        $grammar.parse($authority, rule => 'authority');
+        if not $grammar.parse_result {
+            X::URI::Authority::Invalid.new(source => $authority).throw;
+        }
+
+        self.new($grammar.parse_result);
+    }
+
+    multi method new(Authority:U: Match:D $auth) {
+        my Str $userinfo = do with $auth<userinfo> { .Str } else { '' }
+        my Str $host     = "$auth<host>".lc;
+        my UInt $port    = do with $auth<port> { .Int } else { Nil }
+
+        self.new(:$userinfo, :$host, :$port);
+    }
+
+    multi method gist() {
+        my $authority = '';
+        $authority ~= "$!userinfo@" if $!userinfo;
+        $authority ~= $!host;
+        $authority ~= ":$!port" if $!port;
+        $authority;
+    }
+
+    multi method Str() { $.gist }
+}
 
 # Caveat: This subset is not sensitive to context, so may permit a path that is
 # not valid for the current URI. So, the mutator is more particular.
@@ -54,9 +87,7 @@ has $.grammar;
 has Bool $.match-prefix = False;
 has Path $.path = '';
 has Scheme $.scheme is rw = '';
-has Userinfo $.userinfo is rw = '';
-has Host $.host = '';
-has Port $._port is rw;
+has Authority $.authority is rw;
 has Query $.query = '';
 has Fragment $.fragment is rw = '';
 has %!query-form; # cache query-form
@@ -71,11 +102,11 @@ method parse (Str $str, :$match-prefix) {
     $c_str .= subst(/^ \s* ['<' | '"'] /, '');
     $c_str .= subst(/ ['>' | '"'] \s* $/, '');
 
-    $!scheme   = '';
-    $!_port    = Nil;
-    $!path     = '';
-    $!query    = '';
-    $!fragment = '';
+    $!scheme    = '';
+    $!authority = Nil;
+    $!path      = '';
+    $!query     = '';
+    $!fragment  = '';
     $!uri = Mu;
     %!query-form := Map.new();
     @!segments := ();
@@ -103,10 +134,9 @@ method parse (Str $str, :$match-prefix) {
     $!fragment = .lc with $comp_container<fragment>;
     $comp_container = $comp_container<hier-part> || $comp_container<relative-part>;
 
-    my $authority = $comp_container<authority>;
-    $!userinfo    = .Str with $authority<userinfo>;
-    $!host        = "$authority<host>".lc || '';
-    $!_port       = .Int with $authority<port>;
+    with $comp_container<authority> -> $auth {
+        $!authority = Authority.new($auth);
+    }
 
     # share code with the path mutator
     self!make-path($comp_container);
@@ -182,30 +212,32 @@ multi method new(Str :$uri, :$match-prefix) {
     return self.new($uri, :$match-prefix);
 }
 
-multi method authority(URI:D:) returns Authority:D {
-    my $authority = '';
-    $authority ~= "$!userinfo@" if $!userinfo;
-    $authority ~= $!host // '';
-    $authority ~= ":$!_port" if $!_port;
-    $authority;
+multi method userinfo(URI:D:) returns Userinfo {
+    .userinfo with $!authority
 }
 
-multi method authority(URI:D: Authority:D $new) {
-    $!userinfo = '';
-    $!_port    = Nil;
-
-    if $new ~~ /
-        $<authority> = <IETF::RFC_Grammar::URI::authority>
-    / -> $comp {
-        $!userinfo = .Str with $comp<authority><userinfo>;
-        $!host     = ($comp<authority><host> // '').Str.lc;
-        $!_port    = .Int with $comp<authority><port>;
+multi method userinfo(URI:D: Userinfo $new) {
+    with $!authority {
+        .userinfo = $new;
     }
     else {
-        $!host = '';
+        X::URI::Authority::Invalid.new(
+            soruce => "$new@",
+        ).throw
     }
+}
 
-    return;
+multi method host(URI:D:) returns Host {
+    .host with $!authority;
+}
+
+multi method host(URI:D: Host $new) {
+    with $!authority {
+        .host = $new;
+    }
+    else {
+        $!authority .= new(host => $new);
+    }
 }
 
 method host {
@@ -217,14 +249,33 @@ method default-port {
 }
 method default_port { $.default-port() } # artifact form
 
-multi method port(URI:D:) returns Port { $!_port // $.default-port }
+multi method _port(URI:D:) returns Port {
+    return-rw .port with $!authority;
+}
+
+multi method port(URI:D:) returns Port { $._port // $.default-port }
 
 multi method port(URI:D: Port $new) {
-    $!_port = $new;
+    with $!authority {
+        .port = $new;
+    }
+    else {
+        X::URI::Authority::Invalid.new(
+            source => ":$new",
+        ).throw
+    }
 }
 
 multi method port(URI:D: Nil) {
-    $!_port = Nil;
+    .port = Nil with $!authority;
+}
+
+multi method authority(URI:D: Str:D $authority) returns Authority:D {
+    $!authority = Authority.new($!grammar, $authority);
+}
+
+multi method authority(URI:D:) is rw returns Authority:D {
+    return-rw $!authority;
 }
 
 my regex URI-paths {

@@ -18,12 +18,12 @@ has $.rfc;
 has $.grammar;
 has $.parse_result;
 
-method parse($parse_str) {
-    $!parse_result = $!grammar.parse($parse_str);
+method parse($parse_str, :$rule = 'TOP') {
+    $!parse_result = $!grammar.parse($parse_str, :$rule);
 }
 
-method subparse($parse_str) {
-    $!parse_result = $!grammar.subparse($parse_str);
+method subparse($parse_str, :$rule = 'TOP') {
+    $!parse_result = $!grammar.subparse($parse_str, :$rule);
 }
 
 
@@ -48,6 +48,6 @@ method new(Str $rfc, $grammar?) {
         die "Need either rfc with known grammar or grammar";
     }
 
-   return self.bless(rfc => $rfc, grammar => $init_grammar);
+   return self.bless(:$rfc, :grammar($init_grammar));
 }
 
