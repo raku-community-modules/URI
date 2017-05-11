@@ -53,7 +53,6 @@ has Str $.query-form-delimiter;
 has $.grammar;
 has Bool $.match-prefix = False;
 has Path $.path = '';
-has $!is_absolute;  # part of deprecated code scheduled for removal
 has Scheme $.scheme is rw = '';
 has Userinfo $.userinfo is rw = '';
 has Host $.host = '';
@@ -77,7 +76,7 @@ method parse (Str $str, :$match-prefix) {
     $!path     = '';
     $!query    = '';
     $!fragment = '';
-    $!uri = $!is_absolute = Mu;
+    $!uri = Mu;
     %!query-form := Map.new();
     @!segments := ();
 
@@ -244,7 +243,6 @@ my regex relative-ref-paths {
 method !make-path($comp_container) {
     my $path = $comp_container<path-abempty>       ||
                $comp_container<path-absolute>      ;
-    $!is_absolute = ?($path || $!scheme); # part of deprecated code
 
     $path ||=  $comp_container<path-noscheme>      ||
                $comp_container<path-rootless>      ;
