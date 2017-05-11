@@ -46,6 +46,9 @@ our subset Path of Str
 our subset Query of Str
     where /^ <IETF::RFC_Grammar::URI::query> $/;
 
+our subset Fragment of Str
+    where /^ <IETF::RFC_Grammar::URI::fragment> $/;
+
 has Str $.query-form-delimiter;
 has $.grammar;
 has Bool $.match-prefix = False;
@@ -56,8 +59,8 @@ has Userinfo $.userinfo is rw = '';
 has Host $.host = '';
 has Port $._port is rw;
 has Query $.query = '';
-has $!frag;
-has %!query-form;
+has Fragment $.fragment is rw = '';
+has %!query-form; # cache query-form
 has $!uri;  # use of this now deprecated
 
 has @.segments;
@@ -69,11 +72,12 @@ method parse (Str $str, :$match-prefix) {
     $c_str .= subst(/^ \s* ['<' | '"'] /, '');
     $c_str .= subst(/ ['>' | '"'] \s* $/, '');
 
-    $!scheme = '';
-    $!_port  = Nil;
-    $!path   = '';
-    $!query  = '';
-    $!uri = $!is_absolute = $!frag = Mu;
+    $!scheme   = '';
+    $!_port    = Nil;
+    $!path     = '';
+    $!query    = '';
+    $!fragment = '';
+    $!uri = $!is_absolute = Mu;
     %!query-form := Map.new();
     @!segments := ();
 
@@ -97,7 +101,7 @@ method parse (Str $str, :$match-prefix) {
 
     $!scheme = .lc with $comp_container<scheme>;
     $!query = .Str with $comp_container<query>;
-    $!frag = $comp_container<fragment>;
+    $!fragment = .lc with $comp_container<fragment>;
     $comp_container = $comp_container<hier-part> || $comp_container<relative-part>;
 
     my $authority = $comp_container<authority>;
@@ -314,25 +318,21 @@ method path-query {
 
 method path_query { $.path-query } #artifact form
 
-method frag {
-    return ($!frag // '').lc;
-}
-
-method fragment { $.frag }
+method frag { $.fragment }
 
 method !gister(
     :$scheme = $.scheme,
     :$authority = $.authority,
     :$path = $.path,
     :$query = $.query,
-    :$frag = $.frag,
+    :$fragment = $.fragment,
 ) {
     my Str $s;
     $s ~= $scheme if $scheme;
     $s ~= '://' ~ $authority if $authority;
     $s ~= $path;
     $s ~= '?' ~ $query if $query;
-    $s ~= '#' ~ $frag if $frag;
+    $s ~= '#' ~ $fragment if $fragment;
     $s;
 }
 
