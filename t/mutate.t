@@ -72,4 +72,7 @@ throws-like {
     $u.query-form<bar> = 'bad stuff';
 }, X::Assignment::RO, 'cannot set query-form<> because it is immutable';
 
+$u.fragment = "wubba";
+is "$u", 'https://example.com/careers/are/good?bar=lion&bar=tiger#wubba', 'setting fragment works';
+
 done-testing;
