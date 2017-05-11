@@ -33,7 +33,7 @@ our subset Authority of Str
     ] $/;
 
 # Caveat: This subset is not sensitive to context, so may permit a path that is
-# not valid for the current URI.
+# not valid for the current URI. So, the mutator is more particular.
 our subset Path of Str
     where /^ [
            <IETF::RFC_Grammar::URI::path-abempty>
@@ -43,6 +43,10 @@ our subset Path of Str
         || <IETF::RFC_Grammar::URI::path-empty>
     ] $/;
 
+our subset Query of Str
+    where /^ <IETF::RFC_Grammar::URI::query> $/;
+
+has Str $.query-form-delimiter;
 has $.grammar;
 has Bool $.match-prefix = False;
 has Path $.path = '';
@@ -51,9 +55,9 @@ has Scheme $.scheme is rw = '';
 has Userinfo $.userinfo is rw = '';
 has Host $.host = '';
 has Port $._port is rw;
-has $!query;
+has Query $.query = '';
 has $!frag;
-has %!query_form;
+has %!query-form;
 has $!uri;  # use of this now deprecated
 
 has @.segments;
@@ -68,9 +72,9 @@ method parse (Str $str, :$match-prefix) {
     $!scheme = '';
     $!_port  = Nil;
     $!path   = '';
-    $!uri = $!is_absolute = $!query =
-        $!frag = Mu;
-    %!query_form = ();
+    $!query  = '';
+    $!uri = $!is_absolute = $!frag = Mu;
+    %!query-form := Map.new();
     @!segments := ();
 
     if ($!match-prefix or $match-prefix) {
@@ -91,8 +95,8 @@ method parse (Str $str, :$match-prefix) {
     my $comp_container = $!grammar.parse_result<URI-reference><URI> ||
         $!grammar.parse_result<URI-reference><relative-ref>;
 
-    $!scheme = $comp_container<scheme>.lc || '';
-    $!query = $comp_container<query>;
+    $!scheme = .lc with $comp_container<scheme>;
+    $!query = .Str with $comp_container<query>;
     $!frag = $comp_container<fragment>;
     $comp_container = $comp_container<hier-part> || $comp_container<relative-part>;
 
@@ -105,39 +109,48 @@ method parse (Str $str, :$match-prefix) {
     self!make-path($comp_container);
 
     try {
-        %!query_form = split_query( ~$!query ) if $!query;
+        %!query-form := split-query( $!query, :immutable ) if $!query;
         CATCH {
             default {
-                %!query_form = ();
+                %!query-form = ();
             }
         }
     }
 }
 
-our sub split-query(Str $query) {
-    my %query_form;
+our sub split-query(Str $query, Bool :$immutable = False) {
+    my %query-form;
 
     for map { [split(/<[=]>/, $_) ]}, split(/<[&;]>/, $query) -> $qmap {
         for (0, 1) -> $i { # could go past 1 in theory ...
             $qmap[ $i ] = uri-unescape($qmap[ $i ]);
         }
-        if %query_form{$qmap[0]}:exists {
-            if %query_form{ $qmap[0] } ~~ Array  {
-                %query_form{ $qmap[0] }.push($qmap[1])
+        if %query-form{$qmap[0]}:exists {
+            if %query-form{ $qmap[0] } ~~ Array  {
+                %query-form{ $qmap[0] }.push($qmap[1])
             }
             else {
-                %query_form{ $qmap[0] } = [
-                    %query_form{ $qmap[0] }, $qmap[1]
+                %query-form{ $qmap[0] } = [
+                    %query-form{ $qmap[0] }, $qmap[1]
                 ]
             }
         }
         else {
-            %query_form{ $qmap[0]} = $qmap[1]
+            %query-form{ $qmap[0]} = $qmap[1]
         }
     }
 
-    return %query_form;
-
+    if $immutable {
+        # Convert to Lists and Maps to make immutable
+        for %query-form.kv -> $k, $v {
+            %query-form{$k} = $v.List
+                if $v ~~ Array;
+        }
+        %query-form.Map;
+    }
+    else {
+        %query-form;
+    }
 }
 
 # artifact form
@@ -279,13 +292,22 @@ method relative {
     return Bool.new;
 }
 
-method query {
-    item ~($!query // '');
+multi method query(URI:D:) { $!query }
+
+multi method query(URI:D: Query $new) {
+    $!query = $new;
+    if $!query {
+        %!query-form := split-query($!query, :immutable);
+    }
+    else {
+        %!query-form := Map.new();
+    }
 }
 
 method path-query {
-    $.query ?? $.path ~ '?' ~ $.query !! $.path
+    $.query ?? "$.path?$.query" !! $.path
 }
+
 method path_query { $.path-query } #artifact form
 
 method frag {
@@ -307,31 +329,83 @@ method !gister(
     $s ~= $path;
     $s ~= '?' ~ $query if $query;
     $s ~= '#' ~ $frag if $frag;
-    return $s;
+    $s;
 }
 
-method gist() {
-    self!gister
-}
-
-method Str() {
-    return $.gist;
-}
+method gist() { self!gister }
+method Str() { $.gist }
 
 # chunks now strongly deprecated
 # it's segments in p5 URI and segment is part of rfc so no more chunks soon!
 method chunks {
     warn "chunks attribute now deprecated in favor of segments";
-    return @!segments;
+    @!segments;
 }
 
 method uri {
     warn "uri attribute now deprecated in favor of .grammar.parse_result";
-    return $!uri;
+    $!uri;
 }
 
-method query-form {
-    return %!query_form;
+multi method query-form() returns Map:D {
+    %!query-form;
+}
+
+method !query-from-query-form(:$delimiter is copy) {
+    my @query = gather for %!query-form.kv -> $key is copy, $vals {
+		$key //= '';
+        $key = uri-escape($key);
+        for @($vals) -> $val is copy {
+            $val //= '';
+            $val  = uri-escape($val);
+            $val .= trans(" " => "+");
+            take "$key=$val";
+        }
+    }
+
+    unless $delimiter {
+
+        # if no delimiter spec'd, prefer the object delim
+        $delimiter //= $.query-form-delimiter;
+
+        # if no object delim, detect from previous value
+        if !$delimiter && $!query ~~ /(<[&;]>)/ -> $d {
+            $delimiter = $d[0];
+        }
+
+        # if nothing detected, use the ultimate default
+        $delimiter //= '&';
+    }
+
+	$!query = join $delimiter, @query;
+}
+
+multi method query-form(*@replace, *%replace, :$delimiter) {
+    my @pairs = flat @replace».kv, %replace.kv;
+
+    my %qacc;
+    for @pairs -> $k, $v {
+        if %qacc{$k} ~~ Array {
+            %qacc{$k}.push: $v;
+        }
+        elsif %qacc{$k}:exists {
+            %qacc{$k} = [ %qacc{$k}, $v ];
+        }
+        else {
+            %qacc{$k} = $v;
+        }
+    }
+
+    # %!query-form must be immutable
+    for %qacc.kv -> $k, $v {
+        %qacc{$k} = $v.List
+            if $v ~~ Array;
+    }
+    %!query-form := %qacc.Map;
+
+    self!query-from-query-form(:$delimiter);
+
+    %!query-form;
 }
 
 method query_form { $.query-form }
@@ -354,7 +428,7 @@ URI — Uniform Resource Identifiers (absolute and relative)
     my $path = $u.path;
     my $query = $u.query;
     my $frag = $u.frag; # or $u.fragment;
-    my $tag = $u.query_form<tag>; # should be woow
+    my $tag = $u.query-form<tag>; # should be woow
 
     # something p5 URI without grammar could not easily do !
     my $host_in_grammar =

@@ -46,4 +46,15 @@ $u.path("/careers/are/good");
 is "$u", 'https://example.com/careers/are/good?foo#bar', 'empty path works';
 is-deeply $u.segments, ('careers', 'are', 'good'), '/careers/are/good has three segments';
 
+$u.query('foo=cod&foo=trout');
+is "$u", 'https://example.com/careers/are/good?foo=cod&foo=trout#bar', 'setting query works';
+is $u.query-form<foo>[0], 'cod', 'query form foo.0 is good';
+is $u.query-form<foo>[1], 'trout', 'query form foo.1 is good';
+
+$u.query-form('bar' => 'lion', 'bar' => 'tiger');
+is "$u", 'https://example.com/careers/are/good?bar=lion&bar=tiger#bar', 'setting query-form works';
+is $u.query-form<bar>[0], 'lion', 'query form bar.0 is good';
+is $u.query-form<bar>[1], 'tiger', 'query form bar.1 is good';
+
+
 done-testing;
