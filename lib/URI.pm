@@ -27,9 +27,12 @@ our subset Host of Str
     ] $/;
 our subset Port of UInt;
 
-class X::URI::Authority::Invalid is Exception {
-    has $.source;
-    method message { "Could not parse authority: $!source" }
+class X::URI::Authority::Invalid is X::URI::Invalid {
+    has $.before;
+    method message {
+        "Could not parse URI authority ($.source)."
+        ~ $!before ?? " Did you forget to set .host before .$!before?" !! ''
+    }
 }
 
 class Authority {
@@ -65,16 +68,45 @@ class Authority {
     multi method Str() { $.gist }
 }
 
-# Caveat: This subset is not sensitive to context, so may permit a path that is
-# not valid for the current URI. So, the mutator is more particular.
-our subset Path of Str
-    where /^ [
-           <IETF::RFC_Grammar::URI::path-abempty>
-        || <IETF::RFC_Grammar::URI::path-absolute>
-        || <IETF::RFC_Grammar::URI::path-noscheme>
-        || <IETF::RFC_Grammar::URI::path-rootless>
-        || <IETF::RFC_Grammar::URI::path-empty>
-    ] $/;
+# Because Path is limited in form based on factors outside of it, it doesn't
+# actually provide any validation within itself. This type is immutable. The URI
+# class is responsible for performing the necessary validations.
+class Path {
+    has Str $.path;
+    has @.segments;
+
+    my @rules = <
+        path-abempty
+        path-absolute
+        path-noscheme
+        path-rootless
+        path-empty
+    >;
+
+    multi method new(Path:U: Match:D $comp) {
+        my $path-type = @rules.first({ $comp{ $_ }.defined });
+        my $path = $comp{ $path-type };
+
+        my @segments := $path<segment>.list.map({.Str}).list || ('',);
+        if my $first_chunk = $path<segment-nz-nc> || $path<segment-nz> {
+            @segments := ($first_chunk, |@segments);
+        }
+        if @segments.elems == 0 {
+            @segments := ('',);
+        }
+
+        $path = "$path";
+
+        self.new(:$path, :@segments);
+    }
+
+    submethod BUILD(:$!path = '', :@segments) {
+        @!segments := @segments.List;
+    }
+
+    multi method gist() { $!path }
+    multi method Str() { $!path }
+}
 
 our subset Query of Str
     where /^ <IETF::RFC_Grammar::URI::query> $/;
@@ -85,15 +117,13 @@ our subset Fragment of Str
 has Str $.query-form-delimiter;
 has $.grammar;
 has Bool $.match-prefix = False;
-has Path $.path = '';
+has Path $.path = Path.new;
 has Scheme $.scheme is rw = '';
 has Authority $.authority is rw;
 has Query $.query = '';
 has Fragment $.fragment is rw = '';
 has %!query-form; # cache query-form
 has $!uri;  # use of this now deprecated
-
-has @.segments;
 
 method parse (Str $str, :$match-prefix) {
 
@@ -104,12 +134,11 @@ method parse (Str $str, :$match-prefix) {
 
     $!scheme    = '';
     $!authority = Nil;
-    $!path      = '';
+    $!path      = Path.new;
     $!query     = '';
     $!fragment  = '';
     $!uri = Mu;
     %!query-form := Map.new();
-    @!segments := ();
 
     if ($!match-prefix or $match-prefix) {
         $!grammar.subparse($c_str);
@@ -138,8 +167,7 @@ method parse (Str $str, :$match-prefix) {
         $!authority = Authority.new($auth);
     }
 
-    # share code with the path mutator
-    self!make-path($comp_container);
+    $!path = Path.new($comp_container);
 
     try {
         %!query-form := split-query( $!query, :immutable ) if $!query;
@@ -222,7 +250,8 @@ multi method userinfo(URI:D: Userinfo $new) {
     }
     else {
         X::URI::Authority::Invalid.new(
-            soruce => "$new@",
+            before => 'userinfo',
+            source => "$new@",
         ).throw
     }
 }
@@ -257,6 +286,7 @@ multi method port(URI:D: Port $new) {
     }
     else {
         X::URI::Authority::Invalid.new(
+            before => 'port',
             source => ":$new",
         ).throw
     }
@@ -274,49 +304,32 @@ multi method authority(URI:D:) is rw returns Authority:D {
     return-rw $!authority;
 }
 
-my regex URI-paths {
-    ^ [
-            $<path-abempty> = <IETF::RFC_Grammar::URI::path-abempty>
-        |   $<path-absolute> = <IETF::RFC_Grammar::URI::path-absolute>
-        |   $<path-rootless> = <IETF::RFC_Grammar::URI::path-rootless>
-        |   $<path-empty> = <IETF::RFC_Grammar::URI::path-empty>
-    ] $
+my regex path-authority {
+    [ $<path-abempty> = <IETF::RFC_Grammar::URI::path-abempty> ]
 }
-my regex relative-ref-paths {
-    ^ [
-            $<path-abempty> = <IETF::RFC_Grammar::URI::path-abempty>
-        |   $<path-absolute> = <IETF::RFC_Grammar::URI::path-absolute>
-        |   $<path-noscheme> = <IETF::RFC_Grammar::URI::path-noscheme>
-        |   $<path-empty> = <IETF::RFC_Grammar::URI::path-empty>
-    ] $
+my regex path-scheme {
+    [   $<path-absolute> = <IETF::RFC_Grammar::URI::path-absolute>
+    |   $<path-rootless> = <IETF::RFC_Grammar::URI::path-rootless>
+    |   $<path-empty>    = <IETF::RFC_Grammar::URI::path-empty>
+    ]
 }
-
-method !make-path($comp_container) {
-    my $path = $comp_container<path-abempty>       ||
-               $comp_container<path-absolute>      ;
-
-    $path ||=  $comp_container<path-noscheme>      ||
-               $comp_container<path-rootless>      ;
-
-    $!path = "$path" with $path;
-
-    @!segments := $path<segment>.list.map({.Str}).list || ('',);
-    if my $first_chunk = $path<segment-nz-nc> || $path<segment-nz> {
-        @!segments := ($first_chunk, |@!segments);
-    }
-    if @!segments.elems == 0 {
-        @!segments := ('',);
-    }
+my regex path-plain {
+    [   $<path-absolute> = <IETF::RFC_Grammar::URI::path-absolute>
+    |   $<path-noscheme> = <IETF::RFC_Grammar::URI::path-noscheme>
+    |   $<path-empty>    = <IETF::RFC_Grammar::URI::path-empty>
+    ]
 }
 
 multi method path(URI:D:) returns Path:D { $!path }
 
-multi method path(URI:D: Path:D $new) {
-    # Scheme implies a <URI> parse, no scheme <relative-ref>
-    my &path-regex := $!scheme ?? &URI-paths !! &relative-ref-paths;
+multi method path(URI:D: Str:D $new) {
+    my &path-regex := $!authority.defined ?? &path-authority
+                   !! $!scheme            ?? &path-scheme
+                   !!                        &path-plain
+                   ;
 
     if $new ~~ &path-regex -> $comp {
-        self!make-path($comp);
+        $!path = Path.new($comp);
     }
     else {
         X::URI::Invalid.new(
@@ -324,6 +337,8 @@ multi method path(URI:D: Path:D $new) {
         ).throw
     }
 }
+
+multi method segments(URI:D:) { $!path.segments }
 
 my $warn-deprecate-abs-rel = q:to/WARN-END/;
     The absolute and relative methods are artifacts carried over from an old
@@ -388,7 +403,7 @@ method Str() { $.gist }
 # it's segments in p5 URI and segment is part of rfc so no more chunks soon!
 method chunks {
     warn "chunks attribute now deprecated in favor of segments";
-    @!segments;
+    $!path.segments;
 }
 
 method uri {
