@@ -424,6 +424,7 @@ method default_port { $.default-port() } # artifact form
 
 multi method _port(URI:D:) returns Port {
     return-rw .port with $!authority;
+    return Nil;
 }
 
 multi method port(URI:D:) returns Port { $._port // $.default-port }
