@@ -46,33 +46,81 @@ $u.path("/careers/are/good");
 is "$u", 'https://example.com/careers/are/good?foo#bar', 'empty path works';
 is-deeply $u.segments, ('careers', 'are', 'good'), '/careers/are/good has three segments';
 
-$u.query('foo=cod&foo=trout');
-is "$u", 'https://example.com/careers/are/good?foo=cod&foo=trout#bar', 'setting query works';
-is $u.query-form<foo>[0], 'cod', 'query form foo.0 is good';
-is $u.query-form<foo>[1], 'trout', 'query form foo.1 is good';
+subtest {
+    $u.query.hash-format = URI::Query::Mixed;
+    $u.query('foo=cod&foo=trout');
+    is "$u", 'https://example.com/careers/are/good?foo=cod&foo=trout#bar', 'setting query works';
+    is-deeply $u.query-form<foo>, ('cod', 'trout'), 'query from foo is good';
+    is $u.query-form<foo>[0], 'cod', 'query form foo.0 is good';
+    is $u.query-form<foo>[1], 'trout', 'query form foo.1 is good';
 
-throws-like {
-    $u.query-form<foo>[0] = 'bad stuff';
-}, X::Assignment::RO, 'cannot set query-form<>[] because it is immutable';
+    throws-like {
+        $u.query-form<foo>[0] = 'bad stuff';
+    }, X::Assignment::RO, 'cannot set query-form<>[] because it is immutable';
 
-throws-like {
-    $u.query-form<foo> = 'bad stuff';
-}, X::Assignment::RO, 'cannot set query-form<> because it is immutable';
+    $u.query-form<foo> = True;
+    is "$u", 'https://example.com/careers/are/good?foo#bar', 'setting query-form<> to True works';
 
-$u.query-form('bar' => 'lion', 'bar' => 'tiger');
-is "$u", 'https://example.com/careers/are/good?bar=lion&bar=tiger#bar', 'setting query-form works';
-is $u.query-form<bar>[0], 'lion', 'query form bar.0 is good';
-is $u.query-form<bar>[1], 'tiger', 'query form bar.1 is good';
+    $u.query-form('bar' => 'lion', 'bar' => 'tiger');
+    is "$u", 'https://example.com/careers/are/good?bar=lion&bar=tiger#bar', 'setting query-form works';
+    is $u.query-form<bar>[0], 'lion', 'query form bar.0 is good';
+    is $u.query-form<bar>[1], 'tiger', 'query form bar.1 is good';
 
-throws-like {
-    $u.query-form<bar>[0] = 'bad stuff';
-}, X::Assignment::RO, 'cannot set query-form<>[] because it is immutable';
+    throws-like {
+        $u.query-form<bar>[0] = 'bad stuff';
+    }, X::Assignment::RO, 'cannot set query-form<>[] because it is immutable';
 
-throws-like {
-    $u.query-form<bar> = 'bad stuff';
-}, X::Assignment::RO, 'cannot set query-form<> because it is immutable';
+    $u.query-form<bar> = 'ok';
+    is "$u", 'https://example.com/careers/are/good?bar=ok#bar', 'setting query-form<> works';
 
+    $u.query-form<bar> = ('ok', 'andok');
+    is "$u", 'https://example.com/careers/are/good?bar=ok&bar=andok#bar', 'setting query-form<> to list works as expected';
+}, 'hash-format = Mixed';
+
+subtest {
+    $u.query.hash-format = URI::Query::Singles;
+    $u.query('foo=cod&foo=trout');
+    is "$u", 'https://example.com/careers/are/good?foo=cod&foo=trout#bar', 'setting query works';
+    is-deeply $u.query-form<foo>, 'trout', 'query from foo is good';
+
+    $u.query-form<foo> = True;
+    is "$u", 'https://example.com/careers/are/good?foo#bar', 'setting query-form to True works';
+
+    $u.query-form('bar' => 'lion', 'bar' => 'tiger');
+    is "$u", 'https://example.com/careers/are/good?bar=lion&bar=tiger#bar', 'setting query-form works';
+    is $u.query-form<bar>, 'tiger', 'query form bar is good';
+
+    $u.query-form<bar> = ('ok', 'andok');
+    is "$u", 'https://example.com/careers/are/good?bar=ok%20andok#bar', 'setting query-form<> to list works as expected';
+}, 'hash-format = Singles';
+
+subtest {
+    $u.query.hash-format = URI::Query::Lists;
+    $u.query('foo=cod&foo=trout');
+    is "$u", 'https://example.com/careers/are/good?foo=cod&foo=trout#bar', 'setting query works';
+    is-deeply $u.query-form<foo>, $('cod', 'trout'), 'query from foo is good';
+
+    $u.query-form<foo> = True;
+    is "$u", 'https://example.com/careers/are/good?foo#bar', 'setting query-form<> to True works';
+
+    $u.query-form('bar' => 'lion', 'bar' => 'tiger');
+    is "$u", 'https://example.com/careers/are/good?bar=lion&bar=tiger#bar', 'setting query-form works';
+    is $u.query-form<bar>[0], 'lion', 'query form bar.0 is good';
+    is $u.query-form<bar>[1], 'tiger', 'query form bar.1 is good';
+
+    throws-like {
+        $u.query-form<bar>[0] = 'bad stuff';
+    }, X::Assignment::RO, 'cannot set query-form<>[] because it is immutable';
+
+    $u.query-form<bar> = 'ok';
+    is "$u", 'https://example.com/careers/are/good?bar=ok#bar', 'setting query-form<> to single works';
+
+    $u.query-form<bar> = ('ok', 'andok');
+    is "$u", 'https://example.com/careers/are/good?bar=ok&bar=andok#bar', 'setting query-form<> to list works as expected';
+}, 'hash-format = Lists';
+
+$u.query('bar');
 $u.fragment = "wubba";
-is "$u", 'https://example.com/careers/are/good?bar=lion&bar=tiger#wubba', 'setting fragment works';
+is "$u", 'https://example.com/careers/are/good?bar#wubba', 'setting fragment works';
 
 done-testing;
