@@ -358,7 +358,7 @@ our sub split-query(
 }
 
 # artifact form
-our sub split_query(Str $query) { split-query($query) }
+our sub split_query(|c) { split-query(|c) }
 
 # deprecated old call for parse
 method init ($str) {
@@ -372,15 +372,15 @@ submethod BUILD(:$match-prefix) {
     $!grammar = IETF::RFC_Grammar.new('rfc3986');
 }
 
-multi method new(Str $uri, :$match-prefix) {
+multi method new(URI:U: $uri, Bool :$match-prefix) {
     my $obj = self.bless(:$match-prefix);
 
     $obj.parse($uri) if $uri.defined;
-    return $obj;
+    $obj;
 }
 
-multi method new(Str :$uri, :$match-prefix) {
-    return self.new($uri, :$match-prefix);
+multi method new(URI:U: :$uri, Bool :$match-prefix) {
+    self.new($uri, :$match-prefix);
 }
 
 method has-scheme(URI:D:) returns Bool:D {
@@ -409,6 +409,7 @@ my regex path-plain {
 method !check-path(
     :$has-authority = $.has-authority,
     :$has-scheme    = $.has-scheme,
+    :$path          = $.path,
     :$source        = $.gist,
 ) {
     my &path-regex := $has-authority ?? &path-authority
@@ -416,8 +417,12 @@ method !check-path(
                    !!                   &path-plain
                    ;
 
-    X::URI::Invalid.new(:$source).throw
-        if $!path !~~ &path-regex;
+    if $path ~~ &path-regex -> $comp {
+        return $comp;
+    }
+    else {
+        X::URI::Invalid.new(:$source).throw
+    }
 }
 
 multi method scheme(URI:D:) returns Scheme:D { $!scheme }
@@ -448,7 +453,17 @@ multi method host(URI:D:) returns Host {
     Nil;
 }
 
-multi method host(URI:D: Host $new) returns Host {
+multi method host(URI:D: Nil) returns Host {
+    with $!authority {
+        self!check-path(:!has-authority,
+            source => self!gister(authority => ''),
+        );
+
+        $!authority = Nil;
+    }
+}
+
+multi method host(URI:D: Str() $new) returns Host {
     with $!authority {
         .host = $new;
     }
@@ -462,10 +477,10 @@ multi method host(URI:D: Host $new) returns Host {
     }
 }
 
-method default-port returns Port {
+method default-port(URI:D:) returns Port {
     URI::DefaultPort.scheme-port($.scheme)
 }
-method default_port returns Port { $.default-port() } # artifact form
+method default_port(URI:D:) returns Port { $.default-port } # artifact form
 
 multi method _port(URI:D:) returns Port {
     return .port with $!authority;
@@ -494,15 +509,33 @@ multi method port(URI:D:) returns Port { $._port // $.default-port }
 
 multi method port(URI:D: |c) returns Port { self._port(|c) }
 
+multi method authority(URI:D:) returns Authority {
+    $!authority;
+}
+
 multi method authority(URI:D: Nil) returns Authority {
+    with $!authority {
+        self!check-path(:!has-authority,
+            source => self!gister(authority => ''),
+        );
+    }
     $!authority = Nil;
 }
 
+multi method authority(URI:D: Authority:D $new) {
+    without $!authority {
+        self!check-path(:has-authority,
+            source => self!gister(authority => ~$new),
+        );
+    }
+    $!authority = $new;
+}
+
 multi method authority(URI:D: Str() $authority) returns Authority:D {
-    if !$.has-authority && $!path !~~ &path-authority {
-        X::URI::Invalid.new(
+    without $!authority {
+        self!check-path(:has-authority,
             source => self!gister(authority => $authority),
-        ).throw
+        );
     }
     $!authority = Authority.new($!grammar, $authority);
 }
@@ -511,38 +544,14 @@ multi method authority(URI:D:) is rw returns Authority:D {
     return-rw $!authority;
 }
 
-my regex path-authority {
-    [ $<path-abempty> = <IETF::RFC_Grammar::URI::path-abempty> ]
-}
-my regex path-scheme {
-    [   $<path-absolute> = <IETF::RFC_Grammar::URI::path-absolute>
-    |   $<path-rootless> = <IETF::RFC_Grammar::URI::path-rootless>
-    |   $<path-empty>    = <IETF::RFC_Grammar::URI::path-empty>
-    ]
-}
-my regex path-plain {
-    [   $<path-absolute> = <IETF::RFC_Grammar::URI::path-absolute>
-    |   $<path-noscheme> = <IETF::RFC_Grammar::URI::path-noscheme>
-    |   $<path-empty>    = <IETF::RFC_Grammar::URI::path-empty>
-    ]
-}
-
 multi method path(URI:D:) returns Path:D { $!path }
 
-multi method path(URI:D: Str:D $new) {
-    my &path-regex := $!authority.defined ?? &path-authority
-                   !! $!scheme            ?? &path-scheme
-                   !!                        &path-plain
-                   ;
+multi method path(URI:D: Str() $path) {
+    my $comp = self!check-path(:$path,
+        source => self!gister(path => $path),
+    );
 
-    if $new ~~ &path-regex -> $comp {
-        $!path = Path.new($comp);
-    }
-    else {
-        X::URI::Invalid.new(
-            source => self!gister(path => $new),
-        ).throw
-    }
+    $!path = Path.new($comp);
 }
 
 multi method segments(URI:D:) { $!path.segments }
@@ -569,12 +578,31 @@ method relative {
 
 multi method query(URI:D:) { $!query }
 
-multi method query(URI:D: $new) {
+multi method query(URI:D: Str() $new) {
     $!query.query($new);
     $!query
 }
 
-method path-query {
+multi method query(URI:D: *@new) {
+    $!query.query-form(@new)
+}
+
+multi method query-form(URI:D:) {
+    warn 'query-form is deprecated, use query instead';
+    $!query
+}
+
+multi method query-form(URI:D: |c) {
+    warn 'query-form is deprecated, use query instead';
+    $!query.query-form(|c)
+}
+
+method query_form {
+    warn 'query_form is deprecated, use query intead';
+    $.query
+}
+
+method path-query(URI:D:) {
     $.query ?? "$.path?$.query" !! $.path
 }
 
@@ -583,7 +611,7 @@ method path_query { $.path-query } #artifact form
 multi method fragment(URI:D:) { return-rw $!fragment }
 multi method fragment(URI:D: $new) { $!fragment = $new }
 
-method frag { $.fragment }
+method frag(URI:D:) { $.fragment }
 
 method !gister(
     :$scheme = $.scheme,
@@ -601,8 +629,8 @@ method !gister(
     $s;
 }
 
-method gist() { self!gister }
-method Str() { $.gist }
+multi method gist(URI:D:) { self!gister }
+multi method Str(URI:D:) { $.gist }
 
 # chunks now strongly deprecated
 # it's segments in p5 URI and segment is part of rfc so no more chunks soon!
