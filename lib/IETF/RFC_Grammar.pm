@@ -16,16 +16,15 @@ use IETF::RFC_Grammar::URI;
 
 has $.rfc;
 has $.grammar;
-has $.parse_result;
+has $.parse-result;
 
 method parse($parse_str, :$rule = 'TOP') {
-    $!parse_result = $!grammar.parse($parse_str, :$rule);
+    $!parse-result = $!grammar.parse($parse_str, :$rule);
 }
 
 method subparse($parse_str, :$rule = 'TOP') {
-    $!parse_result = $!grammar.subparse($parse_str, :$rule);
+    $!parse-result = $!grammar.subparse($parse_str, :$rule);
 }
-
 
 submethod BUILD(:$!rfc, :$!grammar) {}
 
@@ -51,3 +50,4 @@ method new(Str $rfc, $grammar?) {
    return self.bless(:$rfc, :grammar($init_grammar));
 }
 
+method parse_result { $!parse-result }
