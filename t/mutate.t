@@ -9,17 +9,17 @@ cmp-ok '-asdf', '!~~', URI::Scheme, 'URI::Scheme refused to match -asdf';
 
 my $u = URI.new('http://example.com:80/about/us?foo#bar');
 
-$u.scheme = 'https';
+$u.scheme('https');
 $u.port(443);
 is "$u", 'https://example.com:443/about/us?foo#bar', 'modified URI looks good';
 
 $u.port(Nil);
 is "$u", 'https://example.com/about/us?foo#bar', 'URI with no port looks good';
 
-$u._port = 567;
+$u._port(567);
 is "$u", 'https://example.com:567/about/us?foo#bar', 'setting _port works too';
 
-$u._port = Nil;
+$u._port(Nil);
 is "$u", 'https://example.com/about/us?foo#bar', 'clearing with _port works too';
 
 $u.authority("larry@perl6.org:1234");
@@ -122,5 +122,8 @@ subtest {
 $u.query('bar');
 $u.fragment = "wubba";
 is "$u", 'https://example.com/careers/are/good?bar#wubba', 'setting fragment works';
+
+$u.fragment("hello");
+is "$u", 'https://example.com/careers/are/good?bar#hello', 'setting fragment works';
 
 done-testing;

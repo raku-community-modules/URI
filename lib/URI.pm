@@ -57,7 +57,7 @@ class Authority {
         self.new(:$userinfo, :$host, :$port);
     }
 
-    multi method gist() {
+    multi method gist(Authority:D:) returns Str {
         my $authority = '';
         $authority ~= "$!userinfo@" if $!userinfo;
         $authority ~= $!host;
@@ -65,7 +65,7 @@ class Authority {
         $authority;
     }
 
-    multi method Str() { $.gist }
+    multi method Str(Authority:D:) returns Str { $.gist }
 }
 
 # Because Path is limited in form based on factors outside of it, it doesn't
@@ -104,15 +104,15 @@ class Path {
         @!segments := @segments.List;
     }
 
-    multi method gist() { $!path }
-    multi method Str() { $!path }
+    multi method gist(Path:D:) returns Str { $!path }
+    multi method Str(Path:D:)  returns Str { $!path }
 }
 
 class Query does Positional does Associative does Iterable {
     our subset ValidQuery of Str
         where /^ <IETF::RFC_Grammar::URI::query> $/;
 
-    our enum HashFormat <Mixed Singles Lists>;
+    our enum HashFormat <None Mixed Singles Lists>;
 
     has HashFormat $.hash-format is rw;
     has ValidQuery $!query;
@@ -148,7 +148,7 @@ class Query does Positional does Associative does Iterable {
     }
 
     method of() { Pair }
-    method iterator() { @!query-form.iterator }
+    method iterator(Query:D:) { @!query-form.iterator }
 
     # positional context
     method AT-POS(Query:D: $i)     { @!query-form[$i] }
@@ -236,8 +236,8 @@ class Query does Positional does Associative does Iterable {
     }
 
     # string context
-    multi method gist() { $.query }
-    multi method Str() { $.gist }
+    multi method gist(Query:D:) returns Str { $.query }
+    multi method Str(Query:D:) returns Str { $.gist }
 
 }
 
@@ -248,13 +248,13 @@ has Str $.query-form-delimiter;
 has $.grammar;
 has Bool $.match-prefix = False;
 has Path $.path = Path.new;
-has Scheme $.scheme is rw = '';
+has Scheme $.scheme = '';
 has Authority $.authority is rw;
 has Query $.query = Query.new('');
 has Fragment $.fragment is rw = '';
 has $!uri;  # use of this now deprecated
 
-method parse (Str $str, :$match-prefix) {
+method parse(URI:D: Str() $str, Bool :$match-prefix = False) {
 
     # clear string before parsing
     my Str $c_str = $str;
@@ -299,9 +299,8 @@ method parse (Str $str, :$match-prefix) {
 }
 
 our sub split-query(
-    Str $query,
-    Bool :$immutable = False,
-    :$as-hash = False, # maybe :as-hash<mixed>/:as-hash<single> someday?
+    Str() $query,
+    Query::HashFormat :$hash-format = Query::None,
 ) {
 
     my @query-form = gather for $query.split(/<[&;]>/) {
@@ -317,48 +316,43 @@ our sub split-query(
         }
     }
 
-    # They have requested a mixed hash form
-    if $as-hash {
-        my %query-form;
+    given $hash-format {
+        when Query::Mixed {
+            my %query-form;
 
-        for @query-form -> $qp {
-            if %query-form{ $qp.key }:exists {
-                if %query-form{ $qp.key } ~~ Array {
-                    %query-form{ $qp.key }.push: $qp.value;
+            for @query-form -> $qp {
+                if %query-form{ $qp.key }:exists {
+                    if %query-form{ $qp.key } ~~ Array {
+                        %query-form{ $qp.key }.push: $qp.value;
+                    }
+                    else {
+                        %query-form{ $qp.key } = [
+                            %query-form{ $qp.key },
+                            $qp.value,
+                        ];
+                    }
                 }
                 else {
-                    %query-form{ $qp.key } = [
-                        %query-form{ $qp.key },
-                        $qp.value,
-                    ];
+                    %query-form{ $qp.key } = $qp.value;
                 }
             }
-            else {
-                %query-form{ $qp.key } = $qp.value;
-            }
-        }
 
-        if $immutable {
-            # Convert to Lists and Maps to make immutable
-            for %query-form.kv -> $k, $v {
-                %query-form{$k} = $v.List
-                    if $v ~~ Array;
-            }
-
-            return %query-form.Map;
-        }
-        else {
             return %query-form;
         }
-    }
 
-    elsif $immutable {
-        # Convert to List
-        return @query-form.List;
-    }
+        when Query::Singles {
+            return %(@query-form);
+        }
 
-    else {
-        return @query-form;
+        when Query::Lists {
+            my %query-form;
+            %query-form{ .key }.push: .value for @query-form;
+            return %query-form;
+        }
+
+        default {
+            return @query-form;
+        }
     }
 }
 
@@ -388,69 +382,11 @@ multi method new(Str :$uri, :$match-prefix) {
     return self.new($uri, :$match-prefix);
 }
 
-multi method userinfo(URI:D:) returns Userinfo {
-    .userinfo with $!authority
+method has-scheme(URI:D:) returns Bool:D {
+    $!scheme.chars > 0;
 }
-
-multi method userinfo(URI:D: Userinfo $new) {
-    with $!authority {
-        .userinfo = $new;
-    }
-    else {
-        X::URI::Authority::Invalid.new(
-            before => 'userinfo',
-            source => "$new@",
-        ).throw
-    }
-}
-
-multi method host(URI:D:) returns Host {
-    .host with $!authority;
-}
-
-multi method host(URI:D: Host $new) {
-    with $!authority {
-        .host = $new;
-    }
-    else {
-        $!authority .= new(host => $new);
-    }
-}
-
-method default-port {
-    URI::DefaultPort.scheme-port($.scheme)
-}
-method default_port { $.default-port() } # artifact form
-
-multi method _port(URI:D:) returns Port {
-    return-rw .port with $!authority;
-    return Nil;
-}
-
-multi method port(URI:D:) returns Port { $._port // $.default-port }
-
-multi method port(URI:D: Port $new) {
-    with $!authority {
-        .port = $new;
-    }
-    else {
-        X::URI::Authority::Invalid.new(
-            before => 'port',
-            source => ":$new",
-        ).throw
-    }
-}
-
-multi method port(URI:D: Nil) {
-    .port = Nil with $!authority;
-}
-
-multi method authority(URI:D: Str:D $authority) returns Authority:D {
-    $!authority = Authority.new($!grammar, $authority);
-}
-
-multi method authority(URI:D:) is rw returns Authority:D {
-    return-rw $!authority;
+method has-authority(URI:D:) returns Bool:D {
+    $!authority.defined;
 }
 
 my regex path-authority {
@@ -467,6 +403,111 @@ my regex path-plain {
     |   $<path-noscheme> = <IETF::RFC_Grammar::URI::path-noscheme>
     |   $<path-empty>    = <IETF::RFC_Grammar::URI::path-empty>
     ]
+}
+
+method !check-path(
+    :$has-authority = $.has-authority,
+    :$has-scheme    = $.has-scheme,
+    :$source        = $.gist,
+) {
+    my &path-regex := $has-authority ?? &path-authority
+                   !! $has-scheme    ?? &path-scheme
+                   !!                   &path-plain
+                   ;
+
+    X::URI::Invalid.new(:$source).throw
+        if $!path !~~ &path-regex;
+}
+
+multi method scheme(URI:D:) returns Scheme:D { $!scheme }
+multi method scheme(URI:D: Str() $scheme) returns Scheme:D {
+    self!check-path(:has-scheme, :source(self!gister(:$scheme)));
+    $!scheme = $scheme;
+}
+
+multi method userinfo(URI:D:) returns Userinfo {
+    return .userinfo with $!authority;
+    Nil;
+}
+
+multi method userinfo(URI:D: Str() $new) returns Userinfo {
+    with $!authority {
+        .userinfo = $new;
+    }
+    else {
+        X::URI::Authority::Invalid.new(
+            before => 'userinfo',
+            source => "$new@",
+        ).throw
+    }
+}
+
+multi method host(URI:D:) returns Host {
+    return .host with $!authority;
+    Nil;
+}
+
+multi method host(URI:D: Host $new) returns Host {
+    with $!authority {
+        .host = $new;
+    }
+    else {
+        self!check-path(:has-authority,
+            source => self!gister(authority => $new),
+        );
+
+        $!authority .= new(host => $new);
+        $!authority.host;
+    }
+}
+
+method default-port returns Port {
+    URI::DefaultPort.scheme-port($.scheme)
+}
+method default_port returns Port { $.default-port() } # artifact form
+
+multi method _port(URI:D:) returns Port {
+    return .port with $!authority;
+    Nil;
+}
+
+multi method _port(URI:D: Nil) returns Port {
+    .port = Nil with $!authority;
+    Nil;
+}
+
+multi method _port(URI:D: Int() $new) returns Port {
+    with $!authority {
+        .port = $new;
+    }
+    else {
+        X::URI::Authority::Invalid.new(
+            before => 'port',
+            source => ":$new",
+        ).throw
+    }
+}
+
+
+multi method port(URI:D:) returns Port { $._port // $.default-port }
+
+multi method port(URI:D: |c) returns Port { self._port(|c) }
+
+multi method authority(URI:D: Nil) returns Authority {
+    $!authority = Nil;
+}
+
+multi method authority(URI:D: Str() $authority) returns Authority:D {
+    if !$.has-authority && $!path !~~ &path-authority {
+        X::URI::Invalid.new(
+            source => self!gister(authority => $authority),
+        ).throw
+    }
+    $!authority = Authority.new($!grammar, $authority);
+}
+
+multi method authority(URI:D:) is rw returns Authority:D {
+    return-rw $!authority;
 }
 
 multi method path(URI:D:) returns Path:D { $!path }
@@ -511,8 +552,9 @@ method relative {
 
 multi method query(URI:D:) { $!query }
 
-multi method query(URI:D: Query::ValidQuery $new) {
+multi method query(URI:D: $new) {
     $!query.query($new);
+    $!query
 }
 
 method path-query {
@@ -520,6 +562,9 @@ method path-query {
 }
 
 method path_query { $.path-query } #artifact form
+
+multi method fragment(URI:D:) { return-rw $!fragment }
+multi method fragment(URI:D: $new) { $!fragment = $new }
 
 method frag { $.fragment }
 
@@ -564,26 +609,31 @@ method query_form { $.query-form }
 
 =head1 NAME
 
-URI — Uniform Resource Identifiers (absolute and relative)
+URI — Uniform Resource Identifiers
 
 =head1 SYNOPSIS
 
     use URI;
-    my $u = URI.new('http://her.com/foo/bar?tag=woow#bla');
+    my $u = URI.new('http://example.com/foo/bar?tag=woow#bla');
 
-    my $scheme = $u.scheme;
-    my $authority = $u.authority;
-    my $host = $u.host;
-    my $port = $u.port;
-    my $path = $u.path;
-    my $query = $u.query;
-    my $frag = $u.frag; # or $u.fragment;
-    my $tag = $u.query-form<tag>; # should be woow
+    # Look at the parts
+    say $u.scheme;     #> http
+    say $u.authority;  #> example.com
+    say $u.host;       #> example.com
+    say $u.port;       #> 80
+    say $u.path;       #> /foo/bar
+    say $u.query;      #> tag=woow
+    say $u.query<tag>; #> woow
+    say $u.fragment;   #> bla
+
+    # Modify the parts
+    $u.scheme('http');
+
 
     # something p5 URI without grammar could not easily do !
-    my $host_in_grammar =
-        $u.grammar.parse_result<URI-reference><URI><hier-part><authority><host>;
-    if ($host_in_grammar<reg-name>) {
+    my $host-in-grammar =
+        $u.grammar.parse-result<URI-reference><URI><hier-part><authority><host>;
+    if $host-in-grammar<reg-name> {
         say 'Host looks like registered domain name - approved!';
     }
     else {
@@ -592,13 +642,13 @@ URI — Uniform Resource Identifiers (absolute and relative)
     }
 
     {
-    # require whole string matches URI and throw exception otherwise ..
-    my $u_v = URI.new('http://?#?#');
-    CATCH { when X::URI::Invalid { ... } }
+        # require whole string matches URI and throw exception otherwise ..
+        my $u_v = URI.new('http://?#?#');
+        CATCH { when X::URI::Invalid { ... } }
     }
 
-    my $u_pfx = URI.new('http://example.com } function(var mm){',
-        match-prefix => True);
+    my $u_pfx = URI.new('http://example.com } function(var mm){', :match-prefix);
+
 =end pod
 
 
