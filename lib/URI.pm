@@ -253,7 +253,7 @@ has Query $.query = Query.new('');
 has Fragment $.fragment is rw = '';
 has $!uri;  # use of this now deprecated
 
-method parse(URI:D: Str() $str, Bool :$match-prefix = False) {
+method parse(URI:D: Str() $str, Bool :$match-prefix = $!match-prefix) {
 
     # clear string before parsing
     my Str $c_str = $str;
@@ -267,7 +267,8 @@ method parse(URI:D: Str() $str, Bool :$match-prefix = False) {
     $!fragment  = '';
     $!uri = Mu;
 
-    if ($!match-prefix or $match-prefix) {
+    $!match-prefix = $match-prefix;
+    if $!match-prefix {
         $!grammar.subparse($c_str);
     }
     else {
@@ -300,7 +301,7 @@ method parse(URI:D: Str() $str, Bool :$match-prefix = False) {
 our sub split-query(
     Str() $query,
     Query::HashFormat :$hash-format = Query::None,
-) {
+) is export(:split-query) {
 
     my @query-form = gather for $query.split(/<[&;]>/) {
         # when the query component contains abc=123 form
@@ -656,14 +657,121 @@ URI — Uniform Resource Identifiers
     say $u.port;       #> 80
     say $u.path;       #> /foo/bar
     say $u.query;      #> tag=woow
-    say $u.query<tag>; #> woow
     say $u.fragment;   #> bla
 
     # Modify the parts
-    $u.scheme('http');
+    $u.scheme('https');
+    $u.authority('example.com:8443');
+    $u.path('/bar/foo');
+    $u.query('x=1&y=2'); # OR
+    $u.fragment('cool');
+    say "$u"; #> https://example.com:8443/bar/foo?x=1&y=2#cool
 
+    # Authority is an object, but may be undefined
+    with $u.authority {
+        say .userinfo; # none set, no output
+        say .host;     #> example.com
+        say .port;     #> 8443
 
-    # something p5 URI without grammar could not easily do !
+        # It is mutable too
+        .userinfo('bob');
+        say $u.authority; #> bob@example.com:8443
+    }
+
+    # Path is an object, always defined, but immutable
+    with $u.path {
+        say .path;          #> /bar/foo
+        .say for .segments; #> bar\nfoo\n
+    }
+
+    # Query is an object, always defined, mutable
+    with $u.query {
+        say .query;              #> x=1&y=2
+        .query('foo=1&foo=2');
+        say .query-form<foo>[0]; #> 1
+        say .query-form<foo>[1]; #> 2
+
+        .query-form.push: 'bar' => 'ok';
+        say .query;              #> foo=1&foo=2&bar=ok
+
+        .query('');
+        .query-form<abc> = 123;
+        say .query;              #> abc=123
+    }
+
+=head1 DESCRIPTION
+
+A URI object represents a parsed string that abides by the grammar defined in RFC 3986 for Universal Resource Identifiers. The object then works to enforce the rules defined in the RFC for any modifications made to it.
+
+As such, this class relies heavily on "heavy accessors". From the SYNOPSIS, you may have noted that assignment to accessors is not used. This is because nearly all accessors in this class do some extra work of parsing, validating, and cross-validating that the URI is correct before making any change.
+
+    my $u = URI.new;
+    $u.path = '/foo/bar'; # ERROR: «Cannot modify an immutable URI::Path»
+    $u.path('/foo/bar');  # WORKS!
+
+This mutator pattern is meant to reflect this internal complexity.
+
+=head2 SCHEME, AUTHORITY, AND PATH
+
+In RFC 3986 URIs, the scheme, the authority, and the path are related. This should not matter most of the time, but to avoid problems when setting these three, it is safest to set them in this order:
+
+    my $u = URI.new;
+    $u.path('');
+    $u.scheme($my-scheme);
+    $u.authority($my-host);
+    $u.path($my-path);
+
+This is because an empty path is permitted in any case, but the format of the path is limited whether an authority and scheme are set.
+
+With an authority set (i.e., the URI either starts with "//" or with "scheme://"), a non-empty path must start with a "/".
+
+When there's no authority set, but a scheme is used (e.g., it starts with "scheme:", but not "scheme://"), a non-empty path may either start with a "/" or not, but must contain one or more other characters in either case.
+
+When there's no authoirty and no scheme used, a non-empty path must not start with a "/" and must contain one or more other characters instead.
+
+These rules are enforced whenever setting or clearing the scheme, authority, or path. If the resulting URI object would be invalid a C<X::URI::Invalid> exception will be thrown.
+
+=head2 QUERY
+
+The C<query> method of this class returns a C<URI::Query> object.This is a special object that C<Positional>, C<Associative>, and C<Iterable>. If stringified, it will return a URI-encoded query. If used as an array, will provide a list of C<Pair>s. If used as a hash, will provide a map from query keys to query values.
+
+The native internal representation is a list of C<Pair>s as this is the best match for how queries are typically used. Because of this, there's a problem when using a query as a hash: duplicate pairs are valid. To handle this, the C<URI::Query> object always returns a list of values, sorted in the order they appear for each key.
+
+For example:
+
+    my $u = URI.new('?foo=1&bar=2&foo=3');
+    say $u.query<foo>[0]; #> 1
+    say $u.query<foo>[1]; #> 3
+    say $u.query<bar>[0]; #> 2
+
+Older versions of the URI module handled this differently, using a mixed value representation. In order to gain some backwards compatibility, this is still supported by setting the C<hash-format>:
+
+    # Continues from previous
+    $u.query.hash-format = URI::Query::Mixed;
+    say $u.query<foo>[0]; #> 1
+    say $u.query<foo>[1]; #> 3
+
+    # The bar value is NOT a list now
+    say $u.query<bar>;    #> 2
+
+    # Return to the default mode
+    $u.query.hash-format = URI::Query::Lists;
+
+Another mode is provided to force single values, which is often how applications treat these out of convenience. In that case, only the last value will be kept:
+
+    # Continues from previous
+    $u.query.hash-format = URI::Query::Singles;
+
+    # These are never lists now
+    say $u.query<foo>; #> 3
+    say $u.query<bar>; #> 2
+
+The C<URI::Query::Lists> mode is default and recommended mode.
+
+=head2 GRAMMAR
+
+This class will keep a copy of the result of parsing the URI string for you. If you are interested in precise details of the parse tree, you get them using the C<grammar> method:
+
     my $host-in-grammar =
         $u.grammar.parse-result<URI-reference><URI><hier-part><authority><host>;
     if $host-in-grammar<reg-name> {
@@ -674,6 +782,12 @@ URI — Uniform Resource Identifiers
         say 'Please use registered domain name!';
     }
 
+The C<IETF::RFC_Grammar::URI> grammar sticks close to the BNF defined in RFC 3986. See the source there for precise details.
+
+=head2 PARTIAL MATCHING
+
+Many times a URI you are interested in is embedded within another string. This class will allow you to parse URIs out of a larger string, so long as the URI is at the start. This is done by setting the C<:match-prefix> option during construction or when calling C<parse>:
+
     {
         # require whole string matches URI and throw exception otherwise ..
         my $u_v = URI.new('http://?#?#');
@@ -681,6 +795,132 @@ URI — Uniform Resource Identifiers
     }
 
     my $u_pfx = URI.new('http://example.com } function(var mm){', :match-prefix);
+
+=head1 METHODS
+
+=head2 method new
+
+    multi method new(URI:U: Str() $uri, Bool :$match-prefix) returns URI:D
+    multi method new(URI:U: Str() :$uri, Bool :$match-prefix) returns URI:D
+
+These construct a new C<URI> object and return it. The given C<$uri> value is converted to a string and then parsed using the C<parse> method.
+
+If C<:match-prefix> is set, then the grammar will be allowed to match a prefix of the given input string rather than requiring a total match. The C<:match-prefix> given also becomes the default value for any figure calls to C<parse>.
+
+Throws a C<X::URI::Invalid> exception if the URI cannot be parsed.
+
+=head2 method parse
+
+    method parse(URI:D: Str() $str, Bool :$match-prefix = $.match-prefix)
+
+This method allows an existing URI object to be reused to parse another string. This parses the given string and replaces all internal state of the object with values for the new parse.
+
+The given C<:match-prefix> flag becomes the new default when set.
+
+Throws a C<X::URI::Invalid> exception if the URI cannot be parsed.
+
+=head2 method grammar
+
+    method grammar(URI:D:) returns IETF::RFC_Grammar:D
+
+Returns the object used to parse and store the state of the parse.
+
+=head2 method match-prefix
+
+    method match-prefix(URI:D:) returns Bool:D
+
+Returns True if the most recent call to C<parse> (or C<new>) allowed a prefix match or False if a total match was required.
+
+=head2 method scheme
+
+    multi method scheme(URI:D:) returns URI::Scheme:D
+    multi method scheme(URI:D: Str() $scheme) returns URI::Scheme:D
+
+Returns the scheme part of the URI. This is a string that must match the C<URI::Scheme> subset type.
+
+The second form allows the scheme to be replaced with a new scheme. It is legal for the scheme to be set to an empty string, which has the effect of making the URI scheme-less.
+
+This will throw an C<X::URI::Invalid> exception if adding or removing the scheme will make the URI invalid. See SCHEME, AUTHORITY, AND PATH section for additional details.
+
+=head2 method authority
+
+=head2 method userinfo
+
+=head2 method host
+
+=head2 method default-port
+
+=head2 method _port
+
+=head2 method port
+
+=head2 method path
+
+=head2 method segments
+
+=head2 method query
+
+=head2 method path-query
+
+=head2 method fragment
+
+=head2 method gist
+
+=head2 method Str
+
+=head1 SUBROUTINES
+
+=head2 sub split-query
+
+    sub split-query(Str() $query, URI::Query::HashFormat :$hash-format = URI::Query::None)
+
+This routine will slice and dice a query string, which is useful when parsing URIs and may also be useful when parsing POST entities that are application/x-www-form-urlencoded.
+
+This routine is exported with the C<:split-query> tag or can be used with the full namespace, C<URI::split-query>.
+
+With just the required string, this routine will parse that string and return a list of C<Pair>s mapping each query form key to its respective value. The order is preserved. This is used by C<URI::Query> during construction.
+
+For example:
+
+    my @qf = URI::split-query("foo=1&bar%20=2&foo=3");
+    dd @qf; #> Array @qf = [:foo("1"), "bar " => ("2"), :foo("3")]
+
+Notice that this will perform a C<uri-escape> operation of keys and values in the process so the values you receive have had the URI encoded characters decoded.
+
+You can retrieve the query string as a hash instead by passing the C<:hash-format> option. This works exactly as it does for C<URI::Query>.
+
+The options for C<:hash-format> include:
+
+=head3 URI::Query::Lists
+
+Every key is mapped to a list of one or more values. From the example input, a structure like the following is returned:
+
+    my %qf = URI::split-query("foo=1&bar%20=2&foo=3",
+        hash-format => URI::Query::Lists,
+    );
+    dd %qf; #> Hash %qf = {"bar " => (["2"]), :foo(["1", "3"])}
+
+=head3 URI::Query::Mixed
+
+Every key is mapped to either a list of two or more values or directly to a single value, like the following:
+
+    my %qf = URI::split-query("foo=1&bar%20=2&foo=3",
+        hash-format => URI::Query::Mixed,
+    );
+    dd %qf; #> Hash %qf = {"bar " => ("2"), :foo(["1", "3"])}
+
+=head3 URI::Query::Singles
+
+Every key is mapped to a single value, which will be the last value encountered in the input, like this:
+
+    my %qf = URI::split-query("foo=1&bar%20=2&foo=3",
+        hash-format => URI::Query::Mixed,
+    );
+    dd %qf; #> Hash %qf = {"bar " => ("2"), :foo("3")}
+
+=head1 HELPER TYPES
+
+=head1 EXCEPTIONS
 
 =end pod
 
