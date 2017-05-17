@@ -70,25 +70,25 @@ ok(! $host_in_grammar<reg-name>.defined, 'grammar detected no registered domain 
 
 $u.parse('http://example.com:80/about?foo=cod&bell=bob#bar');
 is($u.query, 'foo=cod&bell=bob', 'query with form params');
-is($u.query-form<foo>, 'cod', 'query param foo');
-is($u.query_form<foo>, 'cod', 'snake case query param foo');
-is($u.query-form<bell>, 'bob', 'query param bell');
+is($u.query<foo>, 'cod', 'query param foo');
+is($u.query<foo>, 'cod', 'snake case query param foo');
+is($u.query<bell>, 'bob', 'query param bell');
 
 $u.parse('http://example.com:80/about?foo=cod&foo=trout#bar');
-is($u.query-form<foo>[0], 'cod', 'query param foo - el 1');
-is($u.query-form<foo>[1], 'trout', 'query param foo - el 2');
+is($u.query<foo>[0], 'cod', 'query param foo - el 1');
+is($u.query<foo>[1], 'trout', 'query param foo - el 2');
 is($u.frag, 'bar', 'test query and frag capture');
 
 $u.parse('http://example.com:80/about?foo=cod&foo=trout');
-is($u.query-form<foo>[1], 'trout', 'query param foo - el 2 without frag');
+is($u.query<foo>[1], 'trout', 'query param foo - el 2 without frag');
 
 $u.parse('about/perl6uri?foo=cod&foo=trout#bar');
-is($u.query-form<foo>[1], 'trout', 'query param foo - el 2 relative path');
+is($u.query<foo>[1], 'trout', 'query param foo - el 2 relative path');
 
 $u.parse('about/perl6uri?foo=cod&foo=trout');
-is($u.query-form<foo>[1], 'trout', 'query param foo - el 2 relative path without frag');
+is($u.query<foo>[1], 'trout', 'query param foo - el 2 relative path without frag');
 
-throws-like {URI.new('http:://?#?#')}, X::URI::Invalid, 
+throws-like {URI.new('http:://?#?#')}, X::URI::Invalid,
     'Bad URI raises exception x:URI::Invalid';
 
 my $uri-w-js = 'http://example.com } function(var mm){ alert(mm) }';
