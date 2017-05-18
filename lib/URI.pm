@@ -16,15 +16,9 @@ our subset Scheme of Str
         || <IETF::RFC_Grammar::URI::scheme>
     ] $/;
 our subset Userinfo of Str
-    where /^ [
-           ''
-        || <IETF::RFC_Grammar::URI::userinfo>
-    ] $/;
+    where /^ [ <IETF::RFC_Grammar::URI::userinfo> ] $/;
 our subset Host of Str
-    where /^ [
-           ''
-        || <IETF::RFC_Grammar::URI::host>
-    ] $/;
+    where /^ [ <IETF::RFC_Grammar::URI::host> ] $/;
 our subset Port of UInt;
 
 class X::URI::Authority::Invalid is X::URI::Invalid {
@@ -36,8 +30,8 @@ class X::URI::Authority::Invalid is X::URI::Invalid {
 }
 
 class Authority {
-    has Userinfo $.userinfo is rw = '';
-    has Host $.host is required;
+    has Userinfo $.userinfo is required is rw = '';
+    has Host $.host is required is rw where *.chars > 0;
     has Port $.port is rw;
 
     multi method new(Authority:U: IETF::RFC_Grammar:D $grammar, Str:D $authority) {
@@ -87,7 +81,7 @@ class Path {
         my $path-type = @rules.first({ $comp{ $_ }.defined });
         my $path = $comp{ $path-type };
 
-        my @segments := $path<segment>.list.map({.Str}).list || ('',);
+        my @segments := $path<segment>.list.map({.Str}).List || ('',);
         if my $first_chunk = $path<segment-nz-nc> || $path<segment-nz> {
             @segments := ($first_chunk, |@segments);
         }
@@ -188,6 +182,7 @@ class Query does Positional does Associative does Iterable {
     }
 
     # Hash-like readers
+    method keys(Query:D:) { @!query-form».key }
     method values(Query:D:) { @!query-form».value }
     method kv(Query:D:) { @!query-form».kv.flat }
     method pairs(Query:D:) { @!query-form }
@@ -208,7 +203,6 @@ class Query does Positional does Associative does Iterable {
     method Bool(Query:D: |c) { @!query-form.Bool }
     method Int(Query:D: |c) { @!query-form.Int }
     method Numeric(Query:D: |c) { @!query-form.Numeric }
-    method Capture(Query:D: |c) { @!query-form.Capture }
 
     multi method query(Query:D:) {
         return $!query with $!query;
@@ -529,15 +523,6 @@ multi method authority(URI:D: Nil) returns Authority:U {
         );
     }
     $!authority = Nil;
-}
-
-multi method authority(URI:D: Authority:D $new) returns Authority:D {
-    without $!authority {
-        self!check-path(:has-authority,
-            source => self!gister(authority => ~$new),
-        );
-    }
-    $!authority = $new;
 }
 
 multi method authority(URI:D: Str() $authority) returns Authority:D {
@@ -1083,85 +1068,284 @@ This is a subset of C<Str> that only accepts valid URI fragments.
 
 =head2 URI::Authority
 
-=head3 method new
+The C<authority> method of a URI constructs or returns this object.
+
+It is recommended that you do not costruct a C<URI::Authority> object directly, but let the methods of C<URI> handle construction.
 
 =head3 method userinfo
 
+    method userinfo(URI::Authority:D:) is rw returns URI::Userinfo:D
+
+This is a simple setter/getter for the userinfo on the authority. It must be defined, but may be the empty string. If not empty, it must be valid for the userinfo component of a URI.
+
 =head3 method host
+
+    method host(URI::Authority:D:) is rw returns URI::Host:D
+
+This is a simple setter/getter for the host part of the URI authority. It must be defined and it must not be empty. It must be valid as a host for the authority component of the URI.
 
 =head3 method port
 
+    method port(URI::Authority:D:) is rw returns URI::Port
+
+This is a simple setter/getter for the port part of the URI authority. It may be set to an undefined value if no explicit port is set in the authority. If defined, it must an unsigned integer.
+
 =head3 method gist
+
+    multi method gist(URI::Authority:D:) returns Str:D
+
+Returns the string representation of the URI authority. For example,
+
+    my $u = URI.new("http://steve@example.com:8008");
+
+    # say calls .gist
+    say $u.authority; #> "steve@example.com:8080";
 
 =head3 method Str
 
+    multi method gist(URI::Authority:D:) returns Str:D
+
+Stringifies identical to C<gist>.
+
 =head2 URI::Path
+
+This class is used to represent URI path components.
 
 It is recommended that you do not construct a C<URI::Path> object directly, but rely on the C<path> setter in C<URI> instead.
 
 =head3 method path
 
+    method path(URI::Path:D:) returns Str:D
+
+Returns the string representation of the path.
+
 =head3 method segments
+
+    method segments(URI::Path:D:) returns List:D
+
+Returns a list representation of the path segments. In a URI, the path segments are the strings between slashes ("/").
 
 =head3 method gist
 
+    method gist(URI::Path:D:) returns Str:D
+
+Returns the C<path>.
+
 =head3 method Str
+
+    method Str(URI::Path:D:) returns Str:D
+
+Returns the C<path>.
 
 =head2 URI::Query
 
+This class is used to represent a URI query component. This class may be safely constructed and used independently of the URI object.
+
+It behaves as both a positional and associative object and is iterable. Internally, it is stored as an C<Array> of C<Pair>s. You must not treat this object purely as you would an C<Array> or purely as you would a C<Hash> as some methods will not work the way you expect.
+
+The performance of the associative methods is not guaranteed and is probably going to be relatively slow. This implementation values simplicity and accuracy of representation to CPU performance. If you need something that is better for CPU performance, you should investigate the use of another library, such as C<Hash::MultiValue>.
+
 =head3 method new
+
+    multi method new(Str() $query) returns URI::Query:D
+    multi method new(:$query) returns URI::Query:D
+
+Constructs a new C<URI::Query> from the given string, which may be empty.
 
 =head3 enum HashFormat
 
+This enumeration provides the values that may be set on C<hash-format> on a C<URI::Query>. Possible values are as follows.
+
+=head4 URI::Query::List
+
+This is the default and recommended value. When set in C<hash-format>, each key in the hash representation will point to a list of one or more values.
+
+This is recommended as it is the most accurate representation to what is actually possible in a query string. The values within each key will be sorted in the same order as they appear in the query.
+
+=head4 URI::Query::Mixed
+
+When set in C<hash-format>, each key in the hash representation may be mapped to either a list of two or more values, or to the value itself if there is only one.
+
+This is not recommended because it means that setting a key to an iterable value will be treated as multiple key-value pairs when it comes time to render the query as a string. This could have unintended consequences.
+
+=head4 URI::Query::Singles
+
+When set in C<hash-format>, each key in the hash representation will be mapped directly to a single value. If there are multiple values that have been set in the query, then only the last will be visible through the hash representation.
+
+This is not recommended because it may hide certain values, but may be useful for simple applications that treat the query string as having unique values. Just note that the trade-off is that your application may be confused when multiple values are present.
+
+=head4 URI::Query::None
+
+This value should not be used, but will be treated the same as C<URI::Query::List> if used. It is intended for internal use.
+
 =head3 method hash-format
+
+    method hash-format(URI::Query:D) is rw returns URI::Query::HashFormat
+
+This is a simple setter/getter for setting the way in which associative lookups are performed. See C<enum URI::Query::HashFormat> for a description of each mode.
 
 =head3 method query
 
+    method query(Query:D:) returns URI::Query::ValidQuery:D
+    method query(Query:D: Str() $new) returns URI::Query::ValidQuery:D
+
+This method returns the string representation of the URI query component. When passed a string, it will replace the query with the new value and will use C<split-query> to parse that query into an array of C<Pair>s.
+
+The primary representation of the queryo object is the value returned by C<query-form>. The C<query> is cached to keep the value stored in it when this method is called to set it or when C<URI::Query> is constructed from a string. Any modification to the internal array of pairs, though, will clear this cache. It  will be generated the next time the C<query> method is called and that string will be cached.
+
 =head3 method query-form
+
+    method query-form(Query:D:) returns Array:D
+    method query-form(Query:D: *@new, *%new) returns Array:D
+
+This method returns the array of C<Pair>s that store the internal representation of the URI query component. When passed an array of C<Pair>s, it will replace the current value with that array.
+
+A quick note about the way pairs are passed as parameters to a method, you most likely want to avoid passing values as named parameters. If values are passed using unquoted strings, they will be treated as named parameters, which is most likely what you want:
+
+    my $q = URI::Query.new;
+
+    # Prefer this
+    $q.query-form('foo' => 1, 'bar' => 2, 'foo' => 3);
+
+    # Avoid these
+    $q.query-form(foo => 1, bar => 2, foo => 3);
+    $q.query-form(:foo(1), :bar(2), :foo(3));
+
+The latter two will result in the first "foo" pair being lost. Named parameters assume unique names and the latter "foo" key will effectively override the former.
+
+That said, the method will allow hashes to be passed in, if that is your preference.
 
 =head3 method of
 
+    method of()
+
+Always returns C<Pair>.
+
 =head3 method iterator
+
+    method iterator(Query:D:) returns Iterator:D
+
+Returns the iterator on the internal array of C<Pair>s.
 
 =head3 method postcircumflex:<[ ]>
 
+    method postcircumflex:<[ ]> returns Pair
+
+This permits positional access to each C<Pair> stored internally. You may use this to get a C<Pair>, set a C<Pair>, test for existence, or delete.
+
 =head3 method postcircumflex:<{ }>
+
+    method postcircumflex:<{ }>
+
+This permits associative access to the values stored internally by key. What is returned here when fetching values depends on the setting in C<hash-format>, a list of one or more values or C<Nil>, by default. You can use this for getting, setting, existence testing, or deletion.
+
+=head3 method keys
+
+    method keys(Query:D:) returns Seq:D
+
+This method returns all the keys of the query in order.
 
 =head3 method values
 
+    method values(Query:D:) returns Seq:D
+
+This method returns all the values of the query in order.
+
 =head3 method kv
+
+    method kv(Query:D:) returns Seq:D
+
+This method returns a sequence alternating the keys and values of the query in order.
 
 =head3 method pairs
 
+    method kv(Query:D:) returns Seq:D
+
+This method returns a copy of the internal representation of the query string array.
+
 =head3 method pop
+
+    method pop(Query:D:) returns Pair
+
+This method removes the last Pair from the array of pairs and returns it.
 
 =head3 method push
 
+    method push(Query:D: *@new)
+
+This method adds the given pairs to the end of the array of pairs in the query using push semantics.
+
 =head3 method append
+
+    method append(Query:D: *@new)
+
+This method adds the given pairs to the end of the array of pairs in the query using append semantics.
 
 =head3 method shift
 
+    method shift(Query:D:) returns Pair
+
+This method removes the first Pair from the array of pairs and returns it.
+
 =head3 method unshift
+
+    method unshift(Query:D: *@new)
+
+This method adds the given pairs to the front of the array of pairs in the query using unshift semantics.
 
 =head3 method prepend
 
+    method prepend(Query:D: *@new)
+
+This method adds the given pairs to the front of the array of pairs in the query using prepend semantics.
+
 =head3 method splice
+
+    method splice(Query:D: $start, $elems?, *@replacement)
+
+This method removes a C<$elems> number of pairs from the array of pairs in the query starting at index C<$start>. It then inserts the pairs in C<@replacement> into that part of the array (if any are given).
 
 =head3 method elems
 
+    method elems(Query:D:) returns Int:D
+
+Returns the number of pairs stored in the query.
+
 =head3 method end
+
+    method end(Query:D:) returns Int:D
+
+Returns the index of the last pair stored in the query.
 
 =head3 method Bool
 
+    method Bool(Query:D:) returns Bool:D
+
+Returns C<True> if the at least one pair is stored in the query or C<False> otherwise.
+
 =head3 method Int
+
+    method Int(Query:D:) returns Int:D
+
+Returns C<elems>.
 
 =head3 method Numeric
 
-=head3 method Capture
+    method Numeric(Query:D:) returns Int:D
+
+Returns C<elems>.
 
 =head3 method gist
 
+    method gist(Query:D:) returns Str:D
+
+Returns the C<query>.
+
 =head3 method Str
+
+    method Str(Query:D:) returns Str:D
+
+Returns the C<query>.
 
 =head1 EXCEPTIONS
 
