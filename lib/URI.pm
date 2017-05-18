@@ -1361,6 +1361,56 @@ This exception is a subclass of C<X::URI::Invalid>. It is thrown whenever the au
 
 In this case, C<source> will refer to the authority only and a C<before> accessor names the part of the authority that was being set before C<host>.
 
+=head1 AUTHORS
+
+Contributors to this module include:
+
+=item Ronald Schmidt (ronaldxs)
+
+=item Moritz Lentz (moritz)
+
+=item Nick Logan (ugexe)
+
+=item Tobias Leich (FROGGS)
+
+=item Jonathan Stowe (jonathanstowe)
+
+=item Justin DeVuyst (jdv)
+
+=item Solomon Foster (colomon)
+
+=item Roman Baumer (rba)
+
+=item Zoffix Znet (zoffixznet)
+
+=item Ahmad M. Zawawi (azawawi)
+
+=item Gabor Szabo (szabgab)
+
+=item Samantha McVey (samcv)
+
+=item Pawel Pabian (bbkr)
+
+=item Rob Hoelz (hoelzro)
+
+=item radiak
+
+=item Paul Cochrane (paultcochrane)
+
+=item Steve Mynott (stmuk)
+
+=item timo
+
+=item David Warring (dwarring)
+
+=item Sterling Hanenkamp (zostay)
+
+=head1 COPYRIGHT & LICENSE
+
+Copyright 2017 Ronald Schmidt.
+
+This software is licensed under the same license as Perl 6 itself.
+
 =end pod
 
 
