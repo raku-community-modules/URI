@@ -1,7 +1,8 @@
 {
     "perl"        : "6.*",
     "name"        : "URI",
-    "version"     : "v0.1.4",
+    "version"     : "v0.2",
+    "auth"        : "github:perl6-community-modules",
     "description" : "A URI implementation using Perl 6 grammars to implement RFC 3986 BNF",
     "license"     : "Artistic-2.0",
     "depends"     : [ ],
