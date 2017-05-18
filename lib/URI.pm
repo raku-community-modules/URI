@@ -434,14 +434,14 @@ multi method scheme(URI:D: Str() $scheme) returns Scheme:D {
 
 multi method userinfo(URI:D:) returns Userinfo {
     return .userinfo with $!authority;
-    Nil;
+    '';
 }
 
 multi method userinfo(URI:D: Str() $new) returns Userinfo {
     with $!authority {
         .userinfo = $new;
     }
-    else {
+    elsif $new ne '' {
         X::URI::Authority::Invalid.new(
             before => 'userinfo',
             source => "$new@",
@@ -451,24 +451,23 @@ multi method userinfo(URI:D: Str() $new) returns Userinfo {
 
 multi method host(URI:D:) returns Host {
     return .host with $!authority;
-    Nil;
-}
-
-multi method host(URI:D: Nil) returns Host {
-    with $!authority {
-        self!check-path(:!has-authority,
-            source => self!gister(authority => ''),
-        );
-
-        $!authority = Nil;
-    }
+    '';
 }
 
 multi method host(URI:D: Str() $new) returns Host {
     with $!authority {
-        .host = $new;
+        if $new eq '' {
+            self!check-path(:!has-authority,
+                source => self!gister(authority => ''),
+            );
+
+            $!authority = Nil;
+        }
+        else {
+            .host = $new;
+        }
     }
-    else {
+    elsif $new ne '' {
         self!check-path(:has-authority,
             source => self!gister(authority => $new),
         );
@@ -476,6 +475,8 @@ multi method host(URI:D: Str() $new) returns Host {
         $!authority .= new(host => $new);
         $!authority.host;
     }
+
+    $new;
 }
 
 method default-port(URI:D:) returns Port {
@@ -856,9 +857,43 @@ This will throw an C<X::URI::Invalid> exception if adding or removing the scheme
 
 =head2 method authority
 
+    multi method authority(URI:D:) returns URI::Authority
+    multi method authority(URI:D: Authority $new) returns URI::Authority
+    multi method authority(URI:D: Str() $new) returns URI::Authority
+
+Returns the C<URI::Authority> for the current URI object. This may be an undefined type object if no authority has been set or found during parse.
+
+When passed a C<URI::Authority> (or C<Nil>), the authority will be updated to point to the given object.
+
+When passed a string, the string will have the authority parsed out of it and a new authoirty object will be used to store the parsed information.
+
+When passing an argument, this will throw an C<X::URI::Invalid> exception if setting or clearing the authority on the URI will make the URI invalid. See SCHEME, AUTHORITY, AND PATH section for details.
+
+The authority is made up of three components: userinfo, host, and port. Of those, host is the only required component. Additional methods are provided for accessing each of those parts separately.
+
 =head2 method userinfo
 
+    multi method userinfo(URI:D:) returns URI::Userinfo:D
+    multi method userinfo(URI:D: Str() $new) returns URI::Userinfo:D
+
+The userinfo is an optional component of the URI authority. This method returns the current userinfo or an empty string.
+
+It may not set to a non-empty string unless an authority with a host is already in place.
+
+Passing a non-empty string to this method while no authority is set will result in a C<X::URI::Authority::Invalid> exception.
+
 =head2 method host
+
+    multi method host(URI:D:) returns URI::Host:D
+    multi method host(URI:D: Str() $new) returns URI::Host:D
+
+The host is a required component of the URI authority (the only required component). This method returns the current host or an empty string.
+
+Setting this to a non-empty string where no authority was set before will cause a new C<URI::Authority> to be constructed. This will result in a check to make sure the URI is still valid.
+
+Setting this to an empty string when an authority is set will cause the C<URI::Authority> to be removed from the URI and will also clear the userinfo and port. This will also result in a check to make sure th URI is still valid.
+
+If a validity check fails (because having or not having an authority means the path that is set is no longer valid), a C<X::URI::Invalid> exception will be thrown.
 
 =head2 method default-port
 
