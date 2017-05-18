@@ -214,12 +214,19 @@ class Query does Positional does Associative does Iterable {
         return $!query with $!query;
         $!query = @!query-form.grep({ .defined }).map({
             if .value eqv True {
-                uri-escape(.key)
+                "{uri-escape(.key)}="
             }
             else {
                 "{uri-escape(.key)}={uri-escape(.value)}"
             }
         }).join('&');
+
+        # If there's only one pair => True, drop the =
+        # so end with "foo" not "foo=" but keep "foo=&bar="
+        # If someone is pickier, they should set $!query directly.
+        $!query ~~ s/'=' $// unless $!query ~~ /'&'/;
+
+        $!query;
     }
 
     multi method query(Query:D: Str() $new) {
@@ -507,13 +514,13 @@ multi method _port(URI:D: Int() $new) returns Port {
 
 multi method port(URI:D:) returns Port { $._port // $.default-port }
 
-multi method port(URI:D: |c) returns Port { self._port(|c) }
+multi method port(URI:D: |c) returns Port { self._port(|c) // $.default-port }
 
 multi method authority(URI:D:) returns Authority {
     $!authority;
 }
 
-multi method authority(URI:D: Nil) returns Authority {
+multi method authority(URI:D: Nil) returns Authority:U {
     with $!authority {
         self!check-path(:!has-authority,
             source => self!gister(authority => ''),
@@ -522,7 +529,7 @@ multi method authority(URI:D: Nil) returns Authority {
     $!authority = Nil;
 }
 
-multi method authority(URI:D: Authority:D $new) {
+multi method authority(URI:D: Authority:D $new) returns Authority:D {
     without $!authority {
         self!check-path(:has-authority,
             source => self!gister(authority => ~$new),
@@ -532,17 +539,29 @@ multi method authority(URI:D: Authority:D $new) {
 }
 
 multi method authority(URI:D: Str() $authority) returns Authority:D {
-    without $!authority {
-        self!check-path(:has-authority,
-            source => self!gister(authority => $authority),
-        );
+    if $authority ne '' {
+        without $!authority {
+            self!check-path(:has-authority,
+                source => self!gister(authority => $authority),
+            );
+        }
+
+        $!authority = Authority.new($!grammar, $authority);
     }
-    $!authority = Authority.new($!grammar, $authority);
+    else {
+        with $!authority {
+            self!check-path(:!has-authority,
+                source => self!gister(authority => $authority),
+            );
+        }
+
+        $!authority = Nil;
+    }
 }
 
 multi method path(URI:D:) returns Path:D { $!path }
 
-multi method path(URI:D: Str() $path) {
+multi method path(URI:D: Str() $path) returns Path:D {
     my $comp = self!check-path(:$path,
         source => self!gister(path => $path),
     );
@@ -550,7 +569,7 @@ multi method path(URI:D: Str() $path) {
     $!path = Path.new($comp);
 }
 
-multi method segments(URI:D:) { $!path.segments }
+multi method segments(URI:D:) returns List:D { $!path.segments }
 
 my $warn-deprecate-abs-rel = q:to/WARN-END/;
     The absolute and relative methods are artifacts carried over from an old
@@ -572,15 +591,16 @@ method relative {
     return Bool.new;
 }
 
-multi method query(URI:D:) { $!query }
+multi method query(URI:D:) returns URI::Query:D { $!query }
 
-multi method query(URI:D: Str() $new) {
+multi method query(URI:D: Str() $new) returns URI::Query:D {
     $!query.query($new);
     $!query
 }
 
-multi method query(URI:D: *@new) {
-    $!query.query-form(@new)
+multi method query(URI:D: *@new) returns URI::Query:D {
+    $!query.query-form(@new);
+    $!query
 }
 
 multi method query-form(URI:D:) {
@@ -598,14 +618,14 @@ method query_form {
     $.query
 }
 
-method path-query(URI:D:) {
-    $.query ?? "$.path?$.query" !! $.path
+method path-query(URI:D:) returns Str:D {
+    $.query ?? "$.path?$.query" !! "$.path"
 }
 
 method path_query { $.path-query } #artifact form
 
-multi method fragment(URI:D:) { return-rw $!fragment }
-multi method fragment(URI:D: $new) { $!fragment = $new }
+multi method fragment(URI:D:) returns Fragment { return-rw $!fragment }
+multi method fragment(URI:D: Str() $new) returns Fragment { $!fragment = $new }
 
 method frag(URI:D:) { $.fragment }
 
@@ -625,8 +645,8 @@ method !gister(
     $s;
 }
 
-multi method gist(URI:D:) { self!gister }
-multi method Str(URI:D:) { $.gist }
+multi method gist(URI:D:) returns Str:D { self!gister }
+multi method Str(URI:D:) returns Str:D { $.gist }
 
 # chunks now strongly deprecated
 # it's segments in p5 URI and segment is part of rfc so no more chunks soon!
@@ -728,7 +748,7 @@ With an authority set (i.e., the URI either starts with "//" or with "scheme://"
 
 When there's no authority set, but a scheme is used (e.g., it starts with "scheme:", but not "scheme://"), a non-empty path may either start with a "/" or not, but must contain one or more other characters in either case.
 
-When there's no authoirty and no scheme used, a non-empty path must not start with a "/" and must contain one or more other characters instead.
+When there's no authority and no scheme used, a non-empty path must not start with a "/" and must contain one or more other characters instead.
 
 These rules are enforced whenever setting or clearing the scheme, authority, or path. If the resulting URI object would be invalid a C<X::URI::Invalid> exception will be thrown.
 
@@ -853,7 +873,7 @@ Returns the C<URI::Authority> for the current URI object. This may be an undefin
 
 When passed a C<URI::Authority> (or C<Nil>), the authority will be updated to point to the given object.
 
-When passed a string, the string will have the authority parsed out of it and a new authoirty object will be used to store the parsed information.
+When passed a string, the string will have the authority parsed out of it and a new authority object will be used to store the parsed information.
 
 When passing an argument, this will throw an C<X::URI::Invalid> exception if setting or clearing the authority on the URI will make the URI invalid. See SCHEME, AUTHORITY, AND PATH section for details.
 
@@ -885,23 +905,91 @@ If a validity check fails (because having or not having an authority means the p
 
 =head2 method default-port
 
+    method default-port(URI:D:) returns URI::Port
+
+This method applies the C<scheme-port> method of C<URI::DefaultPort> to the scheme set on this object. Basically, a shortcut for:
+
+    my $u = URI.new("...");
+    my $port = URI::DefaultPort.scheme-port($u.scheme);
+
+It returns the usual port for the named scheme.
+
 =head2 method _port
+
+    multi method _port(URI:D:) returns URI::Port
+    multi method _port(URI:D: Nil) returns URI::Port
+    multi method _port(URI:D: Int() $new) returns URI::Port
+
+When an authority is set on the URI, this gets or sets the authority's port. This differs from C<port>, which returns either the port set or the C<default-port>. This method returns just the port.
+
+If no authority is set or no port is set, this returns an undefined value (i.e., an C<Int> type object).
+
+Attempting to set the port without setting host or authority first, will result in an C<X::URI::Authority::Invalid> exception.
 
 =head2 method port
 
+    multi method port(URI:D:) returns URI::Port
+    multi method port(URI:D: Nil) returns URI::Port
+    multi method port(URI:D: Int() $new) returns URI::Port
+
+When retrieving a value from the object, this method returns either the port set on the authority or the default port for the current URI scheme. It may return an undefined value (i.e., an C<Int> type object) if there is no port set and no known default port for the current scheme or no scheme set.
+
+When setting a value on the object, this method sets the port on the authority.
+
+If no authority is already set (i.e., C<host> returns an empty string or C<authority> returns an undefined value), then this method will throw an C<X::URI::Authority::Invalid> exception.
+
 =head2 method path
+
+    multi method path(URI:D:) returns URI::Path:D
+    multi method path(URI:D: Str() $path) returns URI::Path:D
+
+Path is the main required element of a URI, but may be an empty string. This method returns the current setting for the path as a C<URI::Path> object. It also allows setting a new path, which will construct a new C<URI::Path> object.
+
+This method will throw a C<X::URI::Invalid> exception if the path is not valid for the current scheme and authority settings.
 
 =head2 method segments
 
+    multi method segments(URI:D:) returns List:D
+
+Returns the path segments (i.e., the parts between slashes). This is a shortcut for:
+
+    my $u = URI.new("...");
+    my @s = $u.path.segments;
+
 =head2 method query
+
+    multi method query(URI:D:) returns URI::Query:D
+    multi method query(URI:D: Str() $new) returns URI::Query:D
+    multi method query(URI:D: *@new) returns URI::Query:D
+
+Accesses or updates the query associated with the URI. This is returns as a C<URI::Query> object. This will always be defined, but may be empty.
+
+When passed a string, the string will be parsed using C<split-query> and the query object will be updated. When passed a list, the list of C<Pair>s given will be used to setup a new query that way.
 
 =head2 method path-query
 
+    method path-query(URI:D:) returns Str:D
+
+Returns the path and query as a string joined by a question mark ("?"). It will return just the path as a string if the query is empty.
+
 =head2 method fragment
+
+    multi method fragment(URI:D:) returns URI::Fragment:D
+    multi method fragment(URI:D: Str() $new) returns URI::Fragment:D
+
+Returns the URI fragment, which is always defined, but may be an empty string. If passed a value, it will set the fragment.
 
 =head2 method gist
 
+    multi method gist(URI:D:) returns Str:D
+
+Reconstructs the URI from the components and returns it as a string.
+
 =head2 method Str
+
+    multi method Str(URI:D:) returns Str:D
+
+Reconstructs the URI from the components and returns it as a string.
 
 =head1 SUBROUTINES
 
@@ -953,9 +1041,129 @@ Every key is mapped to a single value, which will be the last value encountered 
     );
     dd %qf; #> Hash %qf = {"bar " => ("2"), :foo("3")}
 
-=head1 HELPER TYPES
+=head1 HELPER SUBSETS
+
+=head2 URI::Scheme
+
+This is a subset of C<Str> that only accepts valid schemes.
+
+=head2 URI::Userinfo
+
+This is a subset of C<Str> that only accepts valid userinfo.
+
+=head2 URI::Host
+
+This is a subset of C<Str> that only accepts valid hosts.
+
+=head2 URI::Port
+
+This is a subset of C<UInt>.
+
+=head2 URI::Query::ValidQuery
+
+This is a subset of C<Str> that only accepts valid query strings.
+
+=head2 URI::Fragment
+
+This is a subset of C<Str> that only accepts valid URI fragments.
+
+=head1 HELPER CLASSES
+
+=head2 URI::Authority
+
+=head3 method new
+
+=head3 method userinfo
+
+=head3 method host
+
+=head3 method port
+
+=head3 method gist
+
+=head3 method Str
+
+=head2 URI::Path
+
+It is recommended that you do not construct a C<URI::Path> object directly, but rely on the C<path> setter in C<URI> instead.
+
+=head3 method path
+
+=head3 method segments
+
+=head3 method gist
+
+=head3 method Str
+
+=head2 URI::Query
+
+=head3 method new
+
+=head3 enum HashFormat
+
+=head3 method hash-format
+
+=head3 method query
+
+=head3 method query-form
+
+=head3 method of
+
+=head3 method iterator
+
+=head3 method postcircumflex:<[ ]>
+
+=head3 method postcircumflex:<{ }>
+
+=head3 method values
+
+=head3 method kv
+
+=head3 method pairs
+
+=head3 method pop
+
+=head3 method push
+
+=head3 method append
+
+=head3 method shift
+
+=head3 method unshift
+
+=head3 method prepend
+
+=head3 method splice
+
+=head3 method elems
+
+=head3 method end
+
+=head3 method Bool
+
+=head3 method Int
+
+=head3 method Numeric
+
+=head3 method Capture
+
+=head3 method gist
+
+=head3 method Str
 
 =head1 EXCEPTIONS
+
+=head2 X::URI::Invalid
+
+This exception is thrown in many places where the URI is being parsed or manipulated. If the string being parsed is not a valid URI or if certain manipulations of the URI object would cause it to become an invalid URI, this exception may be used.
+
+It provides a C<source> accessor, which returns the string that was determined to be invalid.
+
+=head2 X::URI::Authority::Invalid
+
+This exception is a subclass of C<X::URI::Invalid>. It is thrown whenever the authority of the URI is being manipulated in a way that is not allowed, which occurs when attempting to set C<userinfo> or C<port> before C<host>.
+
+In this case, C<source> will refer to the authority only and a C<before> accessor names the part of the authority that was being set before C<host>.
 
 =end pod
 
