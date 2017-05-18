@@ -11,6 +11,9 @@
         "IETF::RFC_Grammar::IPv6" : "lib/IETF/RFC_Grammar/IPv6.pm",
         "IETF::RFC_Grammar::URI"  : "lib/IETF/RFC_Grammar/URI.pm",
         "URI"                     : "lib/URI.pm",
+        "URI::Authority"          : "lib/URI.pm",
+        "URI::Path"               : "lib/URI.pm",
+        "URI::Query"              : "lib/URI.pm",
         "URI::Escape"             : "lib/URI/Escape.pm",
         "URI::DefaultPort"        : "lib/URI/DefaultPort.pm"
     },
