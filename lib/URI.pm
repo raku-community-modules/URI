@@ -116,7 +116,7 @@ class Query does Positional does Associative does Iterable {
         self.new(:$query);
     }
 
-    submethod BUILD(:$!query, :@!query-form, :$!hash-format = Lists) {
+    submethod BUILD(:$!query = '', :@!query-form, :$!hash-format = Lists) {
         die "When calling URI::Query.new set either :query or :query-form, but not both."
             if @!query-form and $!query;
 
@@ -182,9 +182,9 @@ class Query does Positional does Associative does Iterable {
     }
 
     # Hash-like readers
-    method keys(Query:D:) { @!query-form».key }
-    method values(Query:D:) { @!query-form».value }
-    method kv(Query:D:) { @!query-form».kv.flat }
+    method keys(Query:D:) { @!query-form.map(*.key) }
+    method values(Query:D:) { @!query-form.map(*.value) }
+    method kv(Query:D:) { @!query-form.map(*.kv).flat }
     method pairs(Query:D:) { @!query-form }
 
     # Array-like manipulators
@@ -225,7 +225,7 @@ class Query does Positional does Associative does Iterable {
 
     multi method query(Query:D: Str() $new) {
         $!query = $new;
-        @!query-form = split-query($!query) if $!query;
+        @!query-form = split-query($!query);
         $!query;
     }
 
@@ -314,7 +314,7 @@ our sub split-query(
         }
 
         # or if the component contains just abc
-        default {
+        when /./ {
             take $_ => True;
         }
     }
