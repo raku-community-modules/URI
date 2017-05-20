@@ -30,8 +30,8 @@ class X::URI::Authority::Invalid is X::URI::Invalid {
 }
 
 class Authority {
-    has Userinfo $.userinfo is required is rw = '';
-    has Host $.host is required is rw where *.chars > 0;
+    has Userinfo:D $.userinfo is default('') is rw = '';
+    has Host:D $.host is required is rw where *.chars > 0;
     has Port $.port is rw;
 
     multi method new(Authority:U: IETF::RFC_Grammar:D $grammar, Str:D $authority) {
@@ -473,7 +473,7 @@ multi method host(URI:D: Str() $new) returns Host {
             source => self!gister(authority => $new),
         );
 
-        $!authority .= new(host => $new);
+        $!authority .= new(host => $new, userinfo => '');
         $!authority.host;
     }
 
@@ -516,16 +516,7 @@ multi method authority(URI:D:) returns Authority {
     $!authority;
 }
 
-multi method authority(URI:D: Nil) returns Authority:U {
-    with $!authority {
-        self!check-path(:!has-authority,
-            source => self!gister(authority => ''),
-        );
-    }
-    $!authority = Nil;
-}
-
-multi method authority(URI:D: Str() $authority) returns Authority:D {
+multi method authority(URI:D: Str() $authority) returns Authority {
     if $authority ne '' {
         without $!authority {
             self!check-path(:has-authority,
@@ -628,11 +619,11 @@ method !gister(
     :$fragment = $.fragment,
 ) {
     my Str $s;
-    $s ~= $scheme if $scheme;
-    $s ~= '://' ~ $authority if $authority;
+    $s ~= "$scheme:"     if $scheme;
+    $s ~= "//$authority" if $authority;
     $s ~= $path;
-    $s ~= '?' ~ $query if $query;
-    $s ~= '#' ~ $fragment if $fragment;
+    $s ~= "?$query"      if $query;
+    $s ~= "#$fragment"   if $fragment;
     $s;
 }
 
@@ -863,12 +854,9 @@ This will throw an C<X::URI::Invalid> exception if adding or removing the scheme
 =head2 method authority
 
     multi method authority(URI:D:) returns URI::Authority
-    multi method authority(URI:D: Authority $new) returns URI::Authority
     multi method authority(URI:D: Str() $new) returns URI::Authority
 
 Returns the C<URI::Authority> for the current URI object. This may be an undefined type object if no authority has been set or found during parse.
-
-When passed a C<URI::Authority> (or C<Nil>), the authority will be updated to point to the given object.
 
 When passed a string, the string will have the authority parsed out of it and a new authority object will be used to store the parsed information.
 
