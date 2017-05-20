@@ -30,6 +30,12 @@ subtest {
 }, 'split-query to lists hash';
 
 subtest {
+    dies-ok {
+        URI::Query.new(query => $qs, query-form => [ a => 1 ]);
+    };
+}, 'bad .new';
+
+subtest {
     my $q = URI::Query.new($qs);
 
     is "$q", 'foo=1&bar=2&foo=3&baz', 'query is cached';
@@ -72,6 +78,10 @@ subtest {
     is-deeply $q<bar>, $('2',);
     is-deeply $q<baz>, $(True,);
 
+    throws-like {
+        $q<foo>[0] = '0';
+    }, X::Assignment::RO;
+
     is $q{$_}:exists, True for <foo bar baz>;
     is $q<qux>:exists, False;
 
@@ -80,9 +90,57 @@ subtest {
     is "$q", 'bar=2&baz=';
 
     $q<foo> = '4';
-
     is "$q", 'bar=2&baz=&foo=4';
+
+    $q<foo> = '5', '6';
+    is "$q", 'bar=2&baz=&foo=5&foo=6';
 }, 'hash-ish lists bits';
+
+subtest {
+    my $q = URI::Query.new($qs, :hash-format(URI::Query::Mixed));
+
+    is-deeply $q<foo>, $('1', '3');
+    is-deeply $q<bar>, '2';
+    is-deeply $q<baz>, True;
+
+    throws-like {
+        $q<foo>[0] = '0';
+    }, X::Assignment::RO;
+
+    is $q{$_}:exists, True for <foo bar baz>;
+    is $q<qux>:exists, False;
+
+    my $foo = $q<foo>:delete;
+    is $foo, $('1', '3');
+    is "$q", 'bar=2&baz=';
+
+    $q<foo> = '4';
+    is "$q", 'bar=2&baz=&foo=4';
+
+    $q<foo> = '5', '6';
+    is "$q", 'bar=2&baz=&foo=5&foo=6';
+}, 'hash-ish mixed bits';
+
+subtest {
+    my $q = URI::Query.new($qs, :hash-format(URI::Query::Singles));
+
+    is-deeply $q<foo>, '3';
+    is-deeply $q<bar>, '2';
+    is-deeply $q<baz>, True;
+
+    is $q{$_}:exists, True for <foo bar baz>;
+    is $q<qux>:exists, False;
+
+    my $foo = $q<foo>:delete;
+    is $foo, '3';
+    is "$q", 'bar=2&baz=';
+
+    $q<foo> = '4';
+    is "$q", 'bar=2&baz=&foo=4';
+
+    $q<foo> = '5', '6';
+    is "$q", 'bar=2&baz=&foo=5%206';
+}, 'hash-ish singles bits';
 
 subtest {
     my $q = URI::Query.new($qs);
