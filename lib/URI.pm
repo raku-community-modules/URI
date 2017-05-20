@@ -112,8 +112,8 @@ class Query does Positional does Associative does Iterable {
     has ValidQuery $!query;
     has Pair @!query-form;
 
-    multi method new(Str() $query) {
-        self.new(:$query);
+    multi method new(Str() $query, :$hash-format = Lists) {
+        self.new(:$query, :$hash-format);
     }
 
     submethod BUILD(:$!query = '', :@!query-form, :$!hash-format = Lists) {
