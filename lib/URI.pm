@@ -83,7 +83,7 @@ class Path {
 
         my @segments := $path<segment>.list.map({.Str}).List || ('',);
         if my $first_chunk = $path<segment-nz-nc> || $path<segment-nz> {
-            @segments := ($first_chunk, |@segments);
+            @segments := ($first_chunk.Str, |@segments);
         }
         if @segments.elems == 0 {
             @segments := ('',);
@@ -412,16 +412,19 @@ method !check-path(
     :$path          = $.path,
     :$source        = $.gist,
 ) {
-    my &path-regex := $has-authority ?? &path-authority
-                   !! $has-scheme    ?? &path-scheme
-                   !!                   &path-plain
-                   ;
-
-    if $path ~~ &path-regex -> $comp {
-        return $comp;
-    }
-    else {
-        X::URI::Invalid.new(:$source).throw
+    with X::URI::Invalid.new(:$source) -> \ex {
+        if $has-authority {
+            ex.throw unless $path ~~ /^ <path-authority> $/;
+            return $<path-authority>;
+        }
+        elsif $has-scheme {
+            ex.throw unless $path ~~ /^ <path-scheme> $/;
+            return $<path-scheme>;
+        }
+        else {
+            ex.throw unless $path ~~ /^ <path-plain> $/;
+            return $<path-plain>;
+        }
     }
 }
 
