@@ -40,22 +40,22 @@ with $u.authority {
 $u.authority('me@localhost:4321');
 is "$u", 'foo://me@localhost:4321';
 
-$u.authority('');
+$u.authority(Nil);
 is "$u", 'foo:';
 
-throws-like {
-    $u.userinfo('me');
-}, X::URI::Authority::Invalid;
+$u.userinfo('me');
+is "$u", 'foo://me@';
 
-throws-like {
-    $u.port(4321);
-}, X::URI::Authority::Invalid;
+$u.port(4321);
+is "$u", 'foo://me@:4321';
 
 $u.host('localhost');
-is "$u", 'foo://localhost';
-
-$u.userinfo('me');
-$u.port(4321);
 is "$u", 'foo://me@localhost:4321';
+
+$u.authority('');
+is "$u", 'foo://';
+
+$u.authority(Nil);
+is "$u", 'foo:';
 
 done-testing;
