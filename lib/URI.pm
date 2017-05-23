@@ -31,17 +31,8 @@ class X::URI::Authority::Invalid is X::URI::Invalid {
 
 class Authority {
     has Userinfo:D $.userinfo is default('') is rw = '';
-    has Host:D $.host is required is rw where *.chars > 0;
+    has Host:D $.host is default('') is rw = '';
     has Port $.port is rw;
-
-    multi method new(Authority:U: IETF::RFC_Grammar:D $grammar, Str:D $authority) {
-        $grammar.parse($authority, rule => 'authority');
-        if not $grammar.parse_result {
-            X::URI::Authority::Invalid.new(source => $authority).throw;
-        }
-
-        self.new($grammar.parse_result);
-    }
 
     multi method new(Authority:U: Match:D $auth) {
         my Str $userinfo = do with $auth<userinfo> { .Str } else { '' }
@@ -94,7 +85,7 @@ class Path {
         self.new(:$path, :@segments);
     }
 
-    submethod BUILD(:$!path = '', :@segments) {
+    submethod BUILD(:$!path = '', :@segments = ('',)) {
         @!segments := @segments.List;
     }
 
@@ -279,15 +270,15 @@ method parse(URI:D: Str() $str, Bool :$match-prefix = $!match-prefix) {
     }
 
     # hacky but for the time being an improvement
-    if (not $!grammar.parse_result) {
+    if (not $!grammar.parse-result) {
         X::URI::Invalid.new(source => $str).throw
     }
 
     # now deprecated
-    $!uri = $!grammar.parse_result;
+    $!uri = $!grammar.parse-result;
 
-    my $comp_container = $!grammar.parse_result<URI-reference><URI> ||
-        $!grammar.parse_result<URI-reference><relative-ref>;
+    my $comp_container = $!grammar.parse-result<URI-reference><URI> ||
+        $!grammar.parse-result<URI-reference><relative-ref>;
 
     $!scheme = .lc with $comp_container<scheme>;
     $!query.query(.Str) with $comp_container<query>;
@@ -441,15 +432,14 @@ multi method userinfo(URI:D:) returns Userinfo {
     '';
 }
 
-multi method userinfo(URI:D: Str() $new) returns Userinfo {
+multi method userinfo(URI:D: Str() $userinfo) returns Userinfo {
     with $!authority {
-        .userinfo = $new;
+        .userinfo = $userinfo;
     }
-    elsif $new ne '' {
-        X::URI::Authority::Invalid.new(
-            before => 'userinfo',
-            source => "$new@",
-        ).throw
+    elsif $userinfo {
+        self!check-path(:has-authority, :source(self!gister(:authority("$userinfo@"))));
+        $!authority .= new(:$userinfo);
+        $!authority.userinfo;
     }
 }
 
@@ -458,29 +448,15 @@ multi method host(URI:D:) returns Host {
     '';
 }
 
-multi method host(URI:D: Str() $new) returns Host {
+multi method host(URI:D: Str() $host) returns Host {
     with $!authority {
-        if $new eq '' {
-            self!check-path(:!has-authority,
-                source => self!gister(authority => ''),
-            );
-
-            $!authority = Nil;
-        }
-        else {
-            .host = $new;
-        }
+        .host = $host;
     }
-    elsif $new ne '' {
-        self!check-path(:has-authority,
-            source => self!gister(authority => $new),
-        );
-
-        $!authority .= new(host => $new, userinfo => '');
+    elsif $host {
+        self!check-path(:has-authority, :source(self!gister(:authority($host))));
+        $!authority .= new(:$host);
         $!authority.host;
     }
-
-    $new;
 }
 
 method default-port(URI:D:) returns Port {
@@ -498,15 +474,14 @@ multi method _port(URI:D: Nil) returns Port {
     Nil;
 }
 
-multi method _port(URI:D: Int() $new) returns Port {
+multi method _port(URI:D: Int() $port) returns Port {
     with $!authority {
-        .port = $new;
+        .port = $port;
     }
     else {
-        X::URI::Authority::Invalid.new(
-            before => 'port',
-            source => ":$new",
-        ).throw
+        self!check-path(:has-authority, :source(self!gister(:authority(":$port"))));
+        $!authority .= new(:$port);
+        $!authority.port;
     }
 }
 
@@ -519,25 +494,32 @@ multi method authority(URI:D:) returns Authority {
     $!authority;
 }
 
-multi method authority(URI:D: Str() $authority) returns Authority {
-    if $authority ne '' {
-        without $!authority {
-            self!check-path(:has-authority,
-                source => self!gister(authority => $authority),
-            );
-        }
-
-        $!authority = Authority.new($!grammar, $authority);
+multi method authority(URI:D: Str() $authority) returns Authority:D {
+    my $gist;
+    without $!authority {
+        self!check-path(:has-authority,
+            source => $gist //= self!gister(:$authority),
+        );
     }
-    else {
-        with $!authority {
-            self!check-path(:!has-authority,
-                source => self!gister(authority => $authority),
-            );
-        }
 
-        $!authority = Nil;
+    $!grammar.parse($authority, rule => 'authority');
+    if not $!grammar.parse-result {
+        X::URI::Invalid.new(
+            source => $gist // self!gister(:$authority),
+        ).throw;
     }
+
+    $!authority = Authority.new($!grammar.parse-result);
+}
+
+multi method authority(URI:D: Nil) returns Authority:U {
+    with $!authority {
+        self!check-path(:!has-authority,
+            source => self!gister(authority => ''),
+        );
+    }
+
+    $!authority = Nil;
 }
 
 multi method authority(URI:D:) is rw returns Authority:D {
@@ -547,11 +529,17 @@ multi method authority(URI:D:) is rw returns Authority:D {
 multi method path(URI:D:) returns Path:D { $!path }
 
 multi method path(URI:D: Str() $path) returns Path:D {
-    my $comp = self!check-path(:$path,
-        source => self!gister(path => $path),
-    );
+    if $path {
+        my $comp = self!check-path(:$path,
+            source => self!gister(:$path),
+        );
 
-    $!path = Path.new($comp);
+
+        $!path = Path.new($comp);
+    }
+    else {
+        $!path = Path.new;
+    }
 }
 
 multi method segments(URI:D:) returns List:D { $!path.segments }
@@ -641,7 +629,7 @@ method chunks {
 }
 
 method uri {
-    warn "uri attribute now deprecated in favor of .grammar.parse_result";
+    warn "uri attribute now deprecated in favor of .grammar.parse-result";
     $!uri;
 }
 
