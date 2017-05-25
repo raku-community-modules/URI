@@ -1,6 +1,6 @@
 use v6;
 use Test;
-plan 22;
+plan 25;
 
 use URI;
 my $u = URI.new('ftp://ftp.is.co.za/rfc/rfc1808.txt', :validating<1>);
@@ -38,8 +38,8 @@ is($u.host, '192.0.2.16', 'telnet host');
 is($u.port, '80', 'telnet port');
 
 $u.parse("file:///etc/hosts");
-is $u.scheme, 'file', 'filescheme';
-ok !$u.authority.defined, 'no authority';
+is $u.scheme, 'file', 'file scheme';
+ok $u.authority.defined, 'no authority';
 is $u.path, '/etc/hosts';
 
 $u.parse('urn:oasis:names:specification:docbook:dtd:xml:4.1.2');
