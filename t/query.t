@@ -15,6 +15,16 @@ subtest {
 }, 'split-query to array';
 
 subtest {
+    my @q = split-query($qs, :!hash-format);
+    is-deeply @q, [foo => '1', bar => '2', foo => '3', baz => True];
+}, 'split-query to array (boolean :!hash-format)';
+
+subtest {
+    my %q = split-query($qs, :hash-format);
+    is-deeply %q, %(foo => ['1', '3'], bar => ['2'], baz => [ True ]);
+}, 'split-query to lists hash (boolean :hash-format)';
+
+subtest {
     my %q = split-query($qs, hash-format => URI::Query::Mixed);
     is-deeply %q, %(foo => ['1', '3'], bar => '2', baz => True);
 }, 'split-query to mixed hash';

@@ -296,8 +296,10 @@ method parse(URI:D: Str() $str, Bool :$match-prefix = $!match-prefix) {
 
 our sub split-query(
     Str() $query,
-    Query::HashFormat :$hash-format = Query::None,
+    :$hash-format is copy = Query::None,
 ) is export(:split-query) {
+    $hash-format = Query::None  if $hash-format eqv False;
+    $hash-format = Query::Lists if $hash-format eqv True;
 
     my @query-form = gather for $query.split(/<[&;]>/) {
         # when the query component contains abc=123 form
@@ -595,7 +597,9 @@ multi method query(URI:D: Str() $new) returns URI::Query:D {
     $!query
 }
 
-multi method query(URI:D: *@new) returns URI::Query:D {
+multi method query(URI:D: *@new, *%bad) returns URI::Query:D {
+    warn 'The query was passed values as named arguments which are ignored. Did you mean to make sure your pairs were quoted or passed in a list instead?' if %bad;
+
     $!query.query-form(@new);
     $!query
 }
@@ -721,13 +725,15 @@ URI — Uniform Resource Identifiers
 
 A URI object represents a parsed string that abides by the grammar defined in RFC 3986 for Universal Resource Identifiers. The object then works to enforce the rules defined in the RFC for any modifications made to it.
 
-As such, this class relies heavily on "heavy accessors". From the SYNOPSIS, you may have noted that assignment to accessors is not used. This is because nearly all accessors in this class do some extra work of parsing, validating, and cross-validating that the URI is correct before making any change.
+As of this writing, The URI class is scheme agnostic. It will verify that URI is correct, in general, but not correct for a given scheme. For example, C<http:foo> would be considered a valid URI even though that is not a valid URI according to the rules specific to the C<http> scheme.
+
+This class uses "heavy accessors". From the SYNOPSIS, you may have noted that assignment to accessors is not used. This is because nearly all accessors in this class do some extra work of parsing, validating, and cross-referencing with other fields to guarantee that the URI is correct before making a change.
 
     my $u = URI.new;
     $u.path = '/foo/bar'; # ERROR: «Cannot modify an immutable URI::Path»
     $u.path('/foo/bar');  # WORKS!
 
-This mutator pattern is meant to reflect this internal complexity.
+This mutator pattern is meant to reflect the internal complexity.
 
 =head2 SCHEME, AUTHORITY, AND PATH
 
@@ -741,19 +747,22 @@ In RFC 3986 URIs, the scheme, the authority, and the path are related. This shou
 
 This is because an empty path is permitted in any case, but the format of the path is limited whether an authority and scheme are set.
 
-With an authority set (i.e., the URI either starts with "//" or with "scheme://"), a non-empty path must start with a "/".
+With an authority set (i.e., the URI either starts with "//" or with "scheme://"), a non-empty path must start with a "/" and may start with empty path segments, e.g. "scheme://foo//" is valid.
 
-When there's no authority set, but a scheme is used (e.g., it starts with "scheme:", but not "scheme://"), a non-empty path may either start with a "/" or not, but must contain one or more other characters in either case.
+When there's no authority set, but a scheme is used (e.g., it starts with "scheme:", but not "scheme://"), a non-empty path may either start with a "/" or not, but must contain one or more other characters in the first segment of the path. Thus, the following code will fail:
 
-When there's no authority and no scheme used, a non-empty path must not start with a "/" and must contain one or more other characters instead.
+    my $u = URI.new('scheme:');
+    $u.path('//'); # ERROR: «Could not parse path "//" as part of URI: scheme://»
 
-These rules are enforced whenever setting or clearing the scheme, authority, or path. If the resulting URI object would be invalid a C<X::URI::Invalid> exception will be thrown.
+When there's no authority and no scheme used, a non-empty path may start with a "/" or not, but must contain one or more other characters in the first segment.
+
+These rules are enforced whenever setting or clearing the scheme, authority, or path. If the resulting URI object would be invalid a C<X::URI::Path::Invalid> exception will be thrown.
 
 =head2 QUERY
 
-The C<query> method of this class returns a C<URI::Query> object.This is a special object that C<Positional>, C<Associative>, and C<Iterable>. If stringified, it will return a URI-encoded query. If used as an array, will provide a list of C<Pair>s. If used as a hash, will provide a map from query keys to query values.
+The C<query> method of this class returns a C<URI::Query> object.This is a special object that is C<Positional>, C<Associative>, and C<Iterable>. That is, it can be bound to an array variable, a hash variable, and iterated using a loop. If stringified, it will return a URI-encoded query. If used as an array, will act like somewhat like an array of C<Pair>s. If used as a hash, will provide a map from query keys to query values.
 
-The native internal representation is a list of C<Pair>s as this is the best match for how queries are typically used. Because of this, there's a problem when using a query as a hash: duplicate pairs are valid. To handle this, the C<URI::Query> object always returns a list of values, sorted in the order they appear for each key.
+The native internal representation is a list of C<Pair>s as this is the best match for how queries are defined. Because of this, there's a problem when using a query as a hash: duplicate pairs are valid. To handle this, the C<URI::Query> object always returns a list of values, sorted in the order they appear for each key.
 
 For example:
 
@@ -774,6 +783,8 @@ Older versions of the URI module handled this differently, using a mixed value r
 
     # Return to the default mode
     $u.query.hash-format = URI::Query::Lists;
+
+However, the list version is safer and may likely work with most existing code that worked with mixed before.
 
 Another mode is provided to force single values, which is often how applications treat these out of convenience. In that case, only the last value will be kept:
 
@@ -800,7 +811,7 @@ This class will keep a copy of the result of parsing the URI string for you. If 
         say 'Please use registered domain name!';
     }
 
-The C<IETF::RFC_Grammar::URI> grammar sticks close to the BNF defined in RFC 3986. See the source there for precise details.
+The C<IETF::RFC_Grammar::URI> grammar sticks close to the BNF defined in RFC 3986.
 
 =head2 PARTIAL MATCHING
 
@@ -847,7 +858,7 @@ Returns the object used to parse and store the state of the parse.
 
     method match-prefix(URI:D:) returns Bool:D
 
-Returns True if the most recent call to C<parse> (or C<new>) allowed a prefix match or False if a total match was required.
+Returns True if the most recent call to C<parse> (or C<new>) allowed a prefix match or False if a total match was required. This is the default value of any future call to C<parse>.
 
 =head2 method scheme
 
@@ -858,20 +869,23 @@ Returns the scheme part of the URI. This is a string that must match the C<URI::
 
 The second form allows the scheme to be replaced with a new scheme. It is legal for the scheme to be set to an empty string, which has the effect of making the URI scheme-less.
 
-This will throw an C<X::URI::Invalid> exception if adding or removing the scheme will make the URI invalid. See SCHEME, AUTHORITY, AND PATH section for additional details.
+This will throw an C<X::URI::Path::Invalid> exception if adding or removing the scheme will make the URI invalid. See SCHEME, AUTHORITY, AND PATH section for additional details.
 
 =head2 method authority
 
     multi method authority(URI:D:) returns URI::Authority
-    multi method authority(URI:D: Str() $new) returns URI::Authority
+    multi method authority(URI:D: Nil) returns URI::Authority:U
+    multi method authority(URI:D: Str() $new) returns URI::Authority:D
 
 Returns the C<URI::Authority> for the current URI object. This may be an undefined type object if no authority has been set or found during parse.
 
-When passed a string, the string will have the authority parsed out of it and a new authority object will be used to store the parsed information.
+When passed a string, the string will have the authority parsed out of it and a new authority object will be used to store the parsed information. An empty authority is valid.
 
-When passing an argument, this will throw an C<X::URI::Invalid> exception if setting or clearing the authority on the URI will make the URI invalid. See SCHEME, AUTHORITY, AND PATH section for details.
+When passed C<Nil>, the authority will be cleared.
 
-The authority is made up of three components: userinfo, host, and port. Of those, host is the only required component. Additional methods are provided for accessing each of those parts separately.
+When passing an argument, this will throw an C<X::URI::Path::Invalid> exception if setting or clearing the authority on the URI will make the URI invalid. See SCHEME, AUTHORITY, AND PATH section for details.
+
+The authority is made up of three components: userinfo, host, and port. Additional methods are provided for accessing each of those parts separately.
 
 =head2 method userinfo
 
@@ -880,22 +894,16 @@ The authority is made up of three components: userinfo, host, and port. Of those
 
 The userinfo is an optional component of the URI authority. This method returns the current userinfo or an empty string.
 
-It may not set to a non-empty string unless an authority with a host is already in place.
-
-Passing a non-empty string to this method while no authority is set will result in a C<X::URI::Authority::Invalid> exception.
+Setting this method will cause a C<URI::Authority> to be constructed and C<authority> to be set, if it is not already defined. This may result in a C<X::URI::Path::Invalid> exception being thrown if adding an authority will make the path invalid.
 
 =head2 method host
 
     multi method host(URI:D:) returns URI::Host:D
     multi method host(URI:D: Str() $new) returns URI::Host:D
 
-The host is a required component of the URI authority (the only required component). This method returns the current host or an empty string.
+The host is a component of the URI authority. This method returns the current host or an empty string.
 
-Setting this to a non-empty string where no authority was set before will cause a new C<URI::Authority> to be constructed. This will result in a check to make sure the URI is still valid.
-
-Setting this to an empty string when an authority is set will cause the C<URI::Authority> to be removed from the URI and will also clear the userinfo and port. This will also result in a check to make sure th URI is still valid.
-
-If a validity check fails (because having or not having an authority means the path that is set is no longer valid), a C<X::URI::Invalid> exception will be thrown.
+Setting this method will cause a C<URI::Authority> to be constructed and C<authority> to be set, if it is not already defined. This may result in a C<X::URI::Path::Invalid> exception being thrown if adding an authority will make the path invalid.
 
 =head2 method default-port
 
@@ -911,14 +919,14 @@ It returns the usual port for the named scheme.
 =head2 method _port
 
     multi method _port(URI:D:) returns URI::Port
-    multi method _port(URI:D: Nil) returns URI::Port
-    multi method _port(URI:D: Int() $new) returns URI::Port
+    multi method _port(URI:D: Nil) returns URI::Port:U
+    multi method _port(URI:D: Int() $new) returns URI::Port:D
 
 When an authority is set on the URI, this gets or sets the authority's port. This differs from C<port>, which returns either the port set or the C<default-port>. This method returns just the port.
 
 If no authority is set or no port is set, this returns an undefined value (i.e., an C<Int> type object).
 
-Attempting to set the port without setting host or authority first, will result in an C<X::URI::Authority::Invalid> exception.
+Setting this method will cause a C<URI::Authority> to be constructed and C<authority> to be set, if it is not already defined. This may result in a C<X::URI::Path::Invalid> exception being thrown if adding an authority will make the path invalid.
 
 =head2 method port
 
@@ -930,7 +938,7 @@ When retrieving a value from the object, this method returns either the port set
 
 When setting a value on the object, this method sets the port on the authority.
 
-If no authority is already set (i.e., C<host> returns an empty string or C<authority> returns an undefined value), then this method will throw an C<X::URI::Authority::Invalid> exception.
+Setting this method will cause a C<URI::Authority> to be constructed and C<authority> to be set, if it is not already defined. This may result in a C<X::URI::Path::Invalid> exception being thrown if adding an authority will make the path invalid.
 
 =head2 method path
 
@@ -939,16 +947,24 @@ If no authority is already set (i.e., C<host> returns an empty string or C<autho
 
 Path is the main required element of a URI, but may be an empty string. This method returns the current setting for the path as a C<URI::Path> object. It also allows setting a new path, which will construct a new C<URI::Path> object.
 
-This method will throw a C<X::URI::Invalid> exception if the path is not valid for the current scheme and authority settings.
+This method will throw a C<X::URI::Path::Invalid> exception if the path is not valid for the current scheme and authority settings.
 
 =head2 method segments
 
     multi method segments(URI:D:) returns List:D
+    multi method segments(URI:D: @segments where *.elems > 0) returns List:D
+    multi method segments(URI:D: $first-segment, *@remaining-segments) returns List:D
 
 Returns the path segments (i.e., the parts between slashes). This is a shortcut for:
 
     my $u = URI.new("...");
     my @s = $u.path.segments;
+
+The number of segments is equal to the number of slashes in the original path plus one. The segments are constructed so that joining the segments by a slash (/) will give you the original path.
+
+You may pass a list in to replace the segments with a new value. This will throw a C<X::URI::Path::Invalid> exception if any of the segments contain a slash or if the set path will cause the URI to become invalid.
+
+Be sure when setting segments to include an initial empty string if you want the path to start with a slash.
 
 =head2 method query
 
@@ -959,6 +975,8 @@ Returns the path segments (i.e., the parts between slashes). This is a shortcut 
 Accesses or updates the query associated with the URI. This is returns as a C<URI::Query> object. This will always be defined, but may be empty.
 
 When passed a string, the string will be parsed using C<split-query> and the query object will be updated. When passed a list, the list of C<Pair>s given will be used to setup a new query that way.
+
+When the list form is used, any named parameters passed will be ignored (they will not be used to fill the query) and a warning will be issued.
 
 =head2 method path-query
 
@@ -989,9 +1007,9 @@ Reconstructs the URI from the components and returns it as a string.
 
 =head2 sub split-query
 
-    sub split-query(Str() $query, URI::Query::HashFormat :$hash-format = URI::Query::None)
+    sub split-query(Str() $query, :$hash-format = URI::Query::None)
 
-This routine will slice and dice a query string, which is useful when parsing URIs and may also be useful when parsing POST entities that are application/x-www-form-urlencoded.
+This routine will slice and dice a query string, which is useful when parsing URIs and may also be useful when parsing POST entities that are encoded as C<application/x-www-form-urlencoded>.
 
 This routine is exported with the C<:split-query> tag or can be used with the full namespace, C<URI::split-query>.
 
@@ -1016,6 +1034,8 @@ Every key is mapped to a list of one or more values. From the example input, a s
         hash-format => URI::Query::Lists,
     );
     dd %qf; #> Hash %qf = {"bar " => (["2"]), :foo(["1", "3"])}
+
+This is also the default if you just pass C<:hash-format> as a boolean option.
 
 =head3 URI::Query::Mixed
 
@@ -1079,7 +1099,7 @@ This is a simple setter/getter for the userinfo on the authority. It must be def
 
     method host(URI::Authority:D:) is rw returns URI::Host:D
 
-This is a simple setter/getter for the host part of the URI authority. It must be defined and it must not be empty. It must be valid as a host for the authority component of the URI.
+This is a simple setter/getter for the host part of the URI authority. It must be defined, but may be the empty string. If not empty, must be a valid host value, which may be an IP address or registered name.
 
 =head3 method port
 
@@ -1108,7 +1128,7 @@ Stringifies identical to C<gist>.
 
 This class is used to represent URI path components.
 
-It is recommended that you do not construct a C<URI::Path> object directly, but rely on the C<path> setter in C<URI> instead.
+It is recommended that you do not construct a C<URI::Path> object directly, but rely on the C<path> setter in C<URI> instead. These objects are immutable. Please use methods on C<URI> to make changes.
 
 =head3 method path
 
@@ -1140,14 +1160,16 @@ This class is used to represent a URI query component. This class may be safely 
 
 It behaves as both a positional and associative object and is iterable. Internally, it is stored as an C<Array> of C<Pair>s. You must not treat this object purely as you would an C<Array> or purely as you would a C<Hash> as some methods will not work the way you expect.
 
-The performance of the associative methods is not guaranteed and is probably going to be relatively slow. This implementation values simplicity and accuracy of representation to CPU performance. If you need something that is better for CPU performance, you should investigate the use of another library, such as C<Hash::MultiValue>.
+The performance of the associative methods is not guaranteed and is probably going to be relatively slow. This implementation values simplicity and accuracy of representation to CPU performance. If you need something that is better for CPU performance, you should investigate the use of another library, such as C<Hash::MultiValue> or sub-class to provide a higher performance implementation of C<URI::Query>'s associative methods.
 
 =head3 method new
 
-    multi method new(Str() $query) returns URI::Query:D
-    multi method new(:$query) returns URI::Query:D
+    multi method new(Str() $query, URI::Query::HashFormat :$hash-format = URI::Query::Lists) returns URI::Query:D
+    multi method new(:$query, URI::Query::HashFormat :$hash-format = URI::Query::Lists) returns URI::Query:D
 
 Constructs a new C<URI::Query> from the given string, which may be empty.
+
+Unlike C<split-query>, which permits boolean values for the C<hash-format> option, C<URI::Query> requires a C<URI::Query::HashFormat> value and will reject a boolean (because the boolean does not make sense in this case).
 
 =head3 enum HashFormat
 
@@ -1173,7 +1195,7 @@ This is not recommended because it may hide certain values, but may be useful fo
 
 =head4 URI::Query::None
 
-This value should not be used, but will be treated the same as C<URI::Query::List> if used. It is intended for internal use.
+This value should not be used, but will be treated the same as C<URI::Query::List> if used here. It is provided for use with C<split-query> only.
 
 =head3 method hash-format
 
@@ -1352,11 +1374,13 @@ This exception is thrown in many places where the URI is being parsed or manipul
 
 It provides a C<source> accessor, which returns the string that was determined to be invalid.
 
-=head2 X::URI::Authority::Invalid
+=head2 X::URI::Path::Invalid
 
-This exception is a subclass of C<X::URI::Invalid>. It is thrown whenever the authority of the URI is being manipulated in a way that is not allowed, which occurs when attempting to set C<userinfo> or C<port> before C<host>.
+In some cases where an attempt is made to set C<path> to an invalid value, this exception is thrown.
 
-In this case, C<source> will refer to the authority only and a C<before> accessor names the part of the authority that was being set before C<host>.
+The C<source> field will name the invalid URI. Strictly speaking, the URI might be valid, but will not parse the same way as given. To make it clear that this is the case, the C<path> field names the invalid path part.
+
+In cases where the segments have been modified in an invalid way, the first invalid segment will be set in C<bad-segment>.
 
 =head1 AUTHORS
 
