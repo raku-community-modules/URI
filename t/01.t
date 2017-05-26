@@ -16,9 +16,10 @@ is($u.port, '80', 'port');
 is($u.path, '/about/us', 'path');
 is($u.query, 'foo', 'query');
 is($u.frag, 'bar', 'frag');
-is($u.segments, 'about us', 'segments');
-is($u.segments[0], 'about', 'first chunk');
-is($u.segments[1], 'us', 'second chunk');
+is($u.segments.join('/'), '/about/us', 'segments');
+is($u.segments[0], '', 'first chunk');
+is($u.segments[1], 'about', 'second chunk');
+is($u.segments[2], 'us', 'third chunk');
 
 is( ~$u, 'http://example.com:80/about/us?foo#bar',
     'Complete path stringification');
@@ -42,9 +43,9 @@ is($u.port, 443, 'default https port');
 ok(! $u._port.defined, 'no specified port');
 
 $u.parse('/foo/bar/baz');
-is($u.segments, 'foo bar baz', 'segments from absolute path');
+is($u.segments.join('/'), '/foo/bar/baz', 'segments from absolute path');
 $u.parse('foo/bar/baz');
-is($u.segments, 'foo bar baz', 'segments from relative path');
+is($u.segments.join('/'), 'foo/bar/baz', 'segments from relative path');
 
 is($u.segments[0], 'foo', 'first segment');
 is($u.segments[1], 'bar', 'second segment');
@@ -53,7 +54,8 @@ is($u.segments[*-1], 'baz', 'last segment');
 # actual uri parameter not required
 $u = URI.new;
 $u.parse('http://foo.com');
-ok($u.segments == 1 && $u.segments[0] eq '', ".segments return [''] for empty path");
+is-deeply($u.segments, ('',), ".segments return ('',) for empty path");
+is $u.segments.join('/'), '', '.segments joined to empty string';;
 is($u.port, 80, 'default http port');
 
 # test URI parsing with <> or "" and spaces

@@ -10,6 +10,15 @@ class X::URI::Invalid is Exception {
     method message { "Could not parse URI: $!source" }
 }
 
+class X::URI::Path::Invalid is X::URI::Invalid {
+    has $.path;
+    has $.bad-segment;
+    method message {
+        qq[Could not parse path "$!path" as part of URI: $.source]
+        ~ ($!bad-segment ?? qq[ with bad segment "$!bad-segment"] !! '')
+    }
+}
+
 our subset Scheme of Str
     where /^ [
            ''
@@ -20,14 +29,6 @@ our subset Userinfo of Str
 our subset Host of Str
     where /^ [ <IETF::RFC_Grammar::URI::host> ] $/;
 our subset Port of UInt;
-
-class X::URI::Authority::Invalid is X::URI::Invalid {
-    has $.before;
-    method message {
-        "Could not parse URI authority ($.source)."
-        ~ $!before ?? " Did you forget to set .host before .$!before?" !! ''
-    }
-}
 
 class Authority {
     has Userinfo:D $.userinfo is default('') is rw = '';
@@ -54,8 +55,10 @@ class Authority {
 }
 
 # Because Path is limited in form based on factors outside of it, it doesn't
-# actually provide any validation within itself. This type is immutable. The URI
-# class is responsible for performing the necessary validations.
+# actually provide any validation within itself. As such, this type is immutable
+# to prevent a problem. This could be made mutable if it is given a reference to
+# the parent URI class. The URI class is responsible for performing the
+# necessary validations.
 class Path {
     has Str $.path;
     has @.segments;
@@ -72,12 +75,13 @@ class Path {
         my $path-type = @rules.first({ $comp{ $_ }.defined });
         my $path = $comp{ $path-type };
 
-        my @segments := $path<segment>.list.map({.Str}).List || ('',);
-        if my $first_chunk = $path<segment-nz-nc> || $path<segment-nz> {
-            @segments := ($first_chunk.Str, |@segments);
+        my @segments := $path<segment>.list.map({.Str}).List || ('', );
+        if $path<segment-nz-nc> || $path<segment-nz> -> $first-chunk {
+            @segments := ($first-chunk.Str, |@segments);
         }
-        if @segments.elems == 0 {
-            @segments := ('',);
+
+        if "$path".starts-with('/') {
+            @segments := ('', |@segments);
         }
 
         $path = "$path";
@@ -405,7 +409,7 @@ method !check-path(
     :$path          = $.path,
     :$source        = $.gist,
 ) {
-    with X::URI::Invalid.new(:$source) -> \ex {
+    given X::URI::Path::Invalid.new(:$path, :$source) -> \ex {
         if $has-authority {
             ex.throw unless $path ~~ /^ <path-authority> $/;
             return $<path-authority>;
@@ -543,6 +547,32 @@ multi method path(URI:D: Str() $path) returns Path:D {
 }
 
 multi method segments(URI:D:) returns List:D { $!path.segments }
+
+multi method segments(URI:D: @segments where *.elems > 0) returns List:D {
+    my $path = @segments.join('/');
+    given self!gister(:$path) -> $source {
+        for @segments -> $bad-segment {
+            X::URI::Path::Invalid.new(
+                :$source,
+                :$path,
+                :$bad-segment,
+            ).throw if $bad-segment.contains("/");
+        }
+
+        self!check-path(:$path, :$source);
+    }
+
+    $!path = Path.new(
+        path     => $path,
+        segments => @segments.map(*.Str),
+    );
+    $!path.segments;
+}
+
+multi method segments(URI:D: $first-segment, *@remaining-segments) returns List:D {
+    my @segments = $first-segment, |@remaining-segments;
+    self.segments(@segments);
+}
 
 my $warn-deprecate-abs-rel = q:to/WARN-END/;
     The absolute and relative methods are artifacts carried over from an old
