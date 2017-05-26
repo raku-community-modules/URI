@@ -2,10 +2,17 @@ use v6;
 use Test;
 use URI;
 
-my $q = URI.new('foo:a/b/c');
+my $q = URI.new('foo:/a/b/c');
 isa-ok $q.path, URI::Path;
 ok $q.path.defined;
 
+with $q.path {
+    is $_, "/a/b/c";
+    is .path, "/a/b/c";
+    is-deeply .segments, $('', 'a', 'b', 'c');
+}
+
+$q.path('a/b/c');
 with $q.path {
     is $_, "a/b/c";
     is .path, "a/b/c";

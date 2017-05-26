@@ -36,15 +36,37 @@ ok !$u._port.defined, 'setting authority clears port';
 
 $u.path("/");
 is "$u", 'https://example.com/?foo#bar', 'setting path works';
-is-deeply $u.segments, ('',), '/ has empty segments';
+is-deeply $u.segments, ('',''), '/ has empty segments';
 
 $u.path("");
 is "$u", 'https://example.com?foo#bar', 'empty path works';
-is-deeply $u.segments, ('',), '"" has empty segments';
+is-deeply $u.segments, ('', ), '"" has one empty segment segments';
 
 $u.path("/careers/are/good");
 is "$u", 'https://example.com/careers/are/good?foo#bar', 'empty path works';
-is-deeply $u.segments, ('careers', 'are', 'good'), '/careers/are/good has three segments';
+is-deeply $u.segments, ('', 'careers', 'are', 'good'), '/careers/are/good has three segments';
+
+$u.segments(«"" foo bar baz»);
+is $u.path, '/foo/bar/baz';
+is "$u", 'https://example.com/foo/bar/baz?foo#bar', 'setting segments via list works';
+is-deeply $u.segments, ('', 'foo', 'bar', 'baz'), 'settings segments gets same back';
+
+throws-like {
+    $u.segments("/");
+}, X::URI::Path::Invalid;
+
+throws-like {
+    $u.segments(</>);
+}, X::URI::Path::Invalid;
+
+throws-like {
+    $u.segments(<careers are good>);
+}, X::URI::Path::Invalid;
+
+$u.segments('', 'careers', 'are', 'good');
+is $u.path, '/careers/are/good';
+is "$u", 'https://example.com/careers/are/good?foo#bar', 'setting segments via slurpy works';
+is-deeply $u.segments, ('', 'careers', 'are', 'good'), 'settings segments gets same back';
 
 subtest {
     $u.query.hash-format = URI::Query::Mixed;
