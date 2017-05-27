@@ -3,6 +3,9 @@ language: minimal
 services:
   - docker
 
+branches:
+  except:
+    - gh-pages
 install:
   - docker pull jjmerelo/test-perl6
   - docker images
