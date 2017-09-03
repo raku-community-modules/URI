@@ -1,6 +1,6 @@
 use v6;
 use Test;
-plan 22;
+plan 25;
 
 use URI;
 my $u = URI.new('ftp://ftp.is.co.za/rfc/rfc1808.txt', :validating<1>);
@@ -10,8 +10,8 @@ is($u.path, '/rfc/rfc1808.txt', 'ftp path');
 
 $u.parse('http://www.ietf.org/rfc/rfc2396.txt');
 is($u.scheme, 'http', 'http scheme');
-is($u.host, 'www.ietf.org', 'http host'); 
-is($u.path, '/rfc/rfc2396.txt', 'http path'); 
+is($u.host, 'www.ietf.org', 'http host');
+is($u.path, '/rfc/rfc2396.txt', 'http path');
 
 $u.parse('ldap://[2001:db8::7]/c=GB?objectClass?one');
 is($u.scheme, 'ldap', 'ldap scheme');
@@ -36,6 +36,11 @@ is($u.scheme, 'telnet', 'telnet scheme');
 is($u.authority, '192.0.2.16:80', 'telnet authority');
 is($u.host, '192.0.2.16', 'telnet host');
 is($u.port, '80', 'telnet port');
+
+$u.parse("file:///etc/hosts");
+is $u.scheme, 'file', 'file scheme';
+ok $u.authority.defined, 'no authority';
+is $u.path, '/etc/hosts';
 
 $u.parse('urn:oasis:names:specification:docbook:dtd:xml:4.1.2');
 is($u.scheme, 'urn', 'urn scheme');
