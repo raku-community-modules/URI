@@ -12,5 +12,6 @@
         "URI::Escape"             : "lib/URI/Escape.pm",
         "URI::DefaultPort"        : "lib/URI/DefaultPort.pm"
     },
-    "source-url"    : "git://github.com/perl6-community-modules/uri.git"
+    "source-url"    : "git://github.com/perl6-community-modules/uri.git",
+    "meta-version" : 1
 }
