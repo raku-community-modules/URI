@@ -1,6 +1,6 @@
 use v6;
 use Test;
-plan 46;
+plan 47;
 
 use URI;
 use URI::Escape;
@@ -22,6 +22,10 @@ is($u.segments[1], 'us', 'second chunk');
 
 is( ~$u, 'http://example.com:80/about/us?foo#bar',
     'Complete path stringification');
+
+# Test with unicode characters
+$u = URI.new('http://test.de/ö');
+is($u.path, '/ö', 'path with unicode');
 
 # allow uri as named argument too
 $u = URI.new(uri => 'https://eXAMplE.COM');

@@ -91,6 +91,6 @@ token gen-delims        { <[:/?\#\[\]@]> };
 token sub-delims        { <[;!$&'()*+,=]> };
 
 token uri-alphanum      { <+uri-alpha +digit> };   
-token uri-alpha         { <[A..Za..z]> };
+token uri-alpha         { <alpha> };
 
 # vim:ft=perl6
