@@ -1,7 +1,8 @@
 {
     "perl"        : "6.*",
     "name"        : "URI",
-    "version"     : "0.1.6",
+    "license"      : "Artistic-2.0",
+    "version"     : "0.2.0",
     "description" : "A URI implementation using Perl 6 grammars to implement RFC 3986 BNF",
     "depends"     : [ ],
     "provides" : {
@@ -13,5 +14,9 @@
         "URI::DefaultPort"        : "lib/URI/DefaultPort.pm"
     },
     "source-url"    : "git://github.com/perl6-community-modules/uri.git",
-    "meta-version" : 1
+    "authors"       : ["Perl 6 community"],
+    "meta-version" : 1,
+    "support"       : {
+        "source"   : "https://github.com/perl6-community-modules/uri.git"
+    }
 }
