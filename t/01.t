@@ -26,6 +26,10 @@ is( ~$u, 'http://example.com:80/about/us?foo#bar',
 # Test with unicode characters
 $u = URI.new('http://test.de/ö');
 is($u.path, '/ö', 'path with unicode');
+say $u;
+
+$u = URI.new('http://127.0.0.1:1234/echo2/☃');
+say $u;
 
 # allow uri as named argument too
 $u = URI.new(uri => 'https://eXAMplE.COM');

@@ -90,7 +90,7 @@ token reserved          { <+gen-delims +sub-delims> };
 token gen-delims        { <[:/?\#\[\]@]> };
 token sub-delims        { <[;!$&'()*+,=]> };
 
-token uri-alphanum      { <+uri-alpha +digit> };   
+token uri-alphanum      { <+uri-alpha +:N +:S> };   
 token uri-alpha         { <alpha> };
 
 # vim:ft=perl6
