@@ -64,14 +64,17 @@ method parse (Str $str, :$match-prefix) {
     $!path ||=  $comp_container<path-noscheme>      ||
                 $comp_container<path-rootless>      ;
 
-    @!segments = $!path<segment>.list() || ('');
+    @!segments = $!path<segment>.list().map: { uri-escape( $_.Str ) }  || ('');
     if my $first_chunk = $!path<segment-nz-nc> || $!path<segment-nz> {
         unshift @!segments, $first_chunk;
     }
     if @!segments.elems == 0 {
         @!segments = ('');
     }
-#    @!segments ||= ('');
+
+    if $!scheme and  $!scheme ~~ /http/ {
+       $!path = $!path.split("/").map( { uri-escape( $_ ) } ).join("/"); # Reconstruct path
+    }
 
     try {
         %!query_form = split_query( ~$!query ) if $!query;

@@ -11,7 +11,7 @@ my %escapes = (^256).flatmap: {
 # line below may work and be useful when fix RT #126252
 #   my token escape_unreserved {<IETF::RFC_Grammar::URI::unreserved>};
 
-sub uri-escape($s, Bool :$no-utf8 = False) is export {
+multi sub uri-escape($s, Bool :$no-utf8 = False) is export {
     $s // return $s;
     $s.subst(:g, /<- [\-._~A..Za..z0..9]>/,
         {
@@ -19,6 +19,11 @@ sub uri-escape($s, Bool :$no-utf8 = False) is export {
                 .Str.encode.list.fmt('%%%X', "")
         }
     );
+}
+
+multi sub uri-escape(Match $s, Bool :$no-utf8 = False) is export {
+    say $s.Str;
+    uri-escape( $s.Str, :$no-utf8 );
 }
 
 # todo - automatic invalid UTF-8 detection

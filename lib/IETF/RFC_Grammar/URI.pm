@@ -47,7 +47,7 @@ token hier-part     {
 };
 
 token scheme            { <.uri-alpha> <[\-+.] +uri-alpha +digit>* };
-    
+
 token authority         { [ <userinfo> '@' ]? <host> [ ':' <port> ]? };
 token userinfo          {
     [ ':' | <likely-userinfo-component> ]*
