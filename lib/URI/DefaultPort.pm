@@ -37,4 +37,18 @@ method scheme-port(Str $scheme) {
     %default_port{$scheme};
 }
 
+=begin pod
+
+=head1 NAME
+
+URI::DefaultPort - Stores the default ports for various services
+
+=head1 SYNOPSIS
+
+    use URI::DefaultPort;
+    
+    say scheme-port( "https" ); # 443
+
+=end pod
+
 # vim:ft=perl6
