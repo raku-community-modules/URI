@@ -1,3 +1,7 @@
+2019-06-12  Juan J. merelo  <jmerelo@penny>
+
+	* lib/URI/Escape.pm: Eliminates a debug "say" that was bugging some other stuff.
+
 New features for June 2011 upgrade include:
 
 1) Make "new" method a useful parsing constructor.

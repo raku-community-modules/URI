@@ -22,7 +22,6 @@ multi sub uri-escape($s, Bool :$no-utf8 = False) is export {
 }
 
 multi sub uri-escape(Match $s, Bool :$no-utf8 = False) is export {
-    say $s.Str;
     uri-escape( $s.Str, :$no-utf8 );
 }
 
