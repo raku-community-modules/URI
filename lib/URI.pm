@@ -73,7 +73,7 @@ method parse (Str $str, :$match-prefix) {
     }
 
     if $!scheme and  $!scheme ~~ /http/ {
-       $!path = $!path.split("/").map( { uri-escape( $_ ) } ).join("/"); # Reconstruct path
+       $!path = $!path.split("/").map( { uri-escape( uri-unescape($_) ) } ).join("/"); # Reconstruct path
     }
 
     try {
