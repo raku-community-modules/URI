@@ -38,7 +38,7 @@ class Authority {
     multi method new(Authority:U: Match:D $auth) {
         my Str $userinfo = do with $auth<userinfo> { .Str } else { '' }
         my Str $host     = "$auth<host>".lc;
-        my UInt $port    = do with $auth<port> { .Int } else { Nil }
+        my UInt $port    = do with $auth<port> { .Int } else { UInt }
 
         self.new(:$userinfo, :$host, :$port);
     }
@@ -71,7 +71,7 @@ class Path {
         path-empty
     >;
 
-    multi method new(Path:U: Match:D $comp) {
+    multi method new(Path:U: Match:D $comp, :$scheme) {
         my $path-type = @rules.first({ $comp{ $_ }.defined });
         my $path = $comp{ $path-type };
 
@@ -85,6 +85,11 @@ class Path {
         }
 
         $path = "$path";
+
+        if $scheme and  $scheme ~~ /http/ {
+            $path = $path.split("/").map( { uri-escape( uri-unescape($_) ) } ).join("/"); # Reconstruct path
+        }
+
 
         self.new(:$path, :@segments);
     }
@@ -293,7 +298,7 @@ method parse(URI:D: Str() $str, Bool :$match-prefix = $!match-prefix) {
         $!authority = Authority.new($auth);
     }
 
-    $!path = Path.new($comp_container);
+    $!path = Path.new($comp_container, :$!scheme);
 }
 
 our sub split-query(
@@ -496,9 +501,7 @@ multi method port(URI:D:) returns Port { $._port // $.default-port }
 
 multi method port(URI:D: |c) returns Port { self._port(|c) // $.default-port }
 
-multi method authority(URI:D:) returns Authority {
-    $!authority;
-}
+proto method authority(|c) { * }
 
 multi method authority(URI:D: Str() $authority) returns Authority:D {
     my $gist;
@@ -528,8 +531,8 @@ multi method authority(URI:D: Nil) returns Authority:U {
     $!authority = Nil;
 }
 
-multi method authority(URI:D:) is rw returns Authority:D {
-    return-rw $!authority;
+multi method authority(URI:D: --> Authority ) is rw {
+    $!authority;
 }
 
 multi method path(URI:D:) returns Path:D { $!path }
@@ -671,7 +674,6 @@ multi method query-form() { $!query }
 
 multi method query-form(|c) { $!query.query-form(|c) }
 
-method query_form { $.query-form }
 
 =begin pod
 

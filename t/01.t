@@ -1,6 +1,7 @@
 use v6;
 use Test;
-plan 48;
+
+plan 50;
 
 use URI;
 use URI::Escape;
