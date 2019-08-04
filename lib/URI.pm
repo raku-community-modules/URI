@@ -43,7 +43,7 @@ class Authority {
         self.new(:$userinfo, :$host, :$port);
     }
 
-    multi method gist(Authority:D:) returns Str {
+    multi method gist(Authority:D: --> Str ) {
         my $authority = '';
         $authority ~= "$!userinfo@" if $!userinfo;
         $authority ~= $!host;
@@ -51,7 +51,7 @@ class Authority {
         $authority;
     }
 
-    multi method Str(Authority:D:) returns Str { $.gist }
+    multi method Str(Authority:D: --> Str ) { $.gist }
 }
 
 # Because Path is limited in form based on factors outside of it, it doesn't
@@ -98,8 +98,8 @@ class Path {
         @!segments := @segments.List;
     }
 
-    multi method gist(Path:D:) returns Str { $!path }
-    multi method Str(Path:D:)  returns Str { $!path }
+    multi method gist(Path:D: --> Str ) { $!path }
+    multi method Str(Path:D: --> Str )  { $!path }
 }
 
 class Query does Positional does Associative does Iterable {
@@ -237,8 +237,8 @@ class Query does Positional does Associative does Iterable {
     }
 
     # string context
-    multi method gist(Query:D:) returns Str { $.query }
-    multi method Str(Query:D:) returns Str { $.gist }
+    multi method gist(Query:D: --> Str ) { $.query }
+    multi method Str(Query:D: --> Str ) { $.gist }
 
 }
 
@@ -387,10 +387,10 @@ multi method new(URI:U: :$uri, Bool :$match-prefix) {
     self.new($uri, :$match-prefix);
 }
 
-method has-scheme(URI:D:) returns Bool:D {
+method has-scheme(URI:D: --> Bool:D ) {
     $!scheme.chars > 0;
 }
-method has-authority(URI:D:) returns Bool:D {
+method has-authority(URI:D: --> Bool:D ) {
     $!authority.defined;
 }
 
@@ -432,18 +432,18 @@ method !check-path(
     }
 }
 
-multi method scheme(URI:D:) returns Scheme:D { $!scheme }
-multi method scheme(URI:D: Str() $scheme) returns Scheme:D {
+multi method scheme(URI:D: --> Scheme:D ) { $!scheme }
+multi method scheme(URI:D: Str() $scheme --> Scheme:D ) {
     self!check-path(:has-scheme, :source(self!gister(:$scheme)));
     $!scheme = $scheme;
 }
 
-multi method userinfo(URI:D:) returns Userinfo {
+multi method userinfo(URI:D: --> Userinfo ) {
     return .userinfo with $!authority;
     '';
 }
 
-multi method userinfo(URI:D: Str() $userinfo) returns Userinfo {
+multi method userinfo(URI:D: Str() $userinfo --> Userinfo ) {
     with $!authority {
         .userinfo = $userinfo;
     }
@@ -454,12 +454,12 @@ multi method userinfo(URI:D: Str() $userinfo) returns Userinfo {
     }
 }
 
-multi method host(URI:D:) returns Host {
+multi method host(URI:D: --> Host ) {
     return .host with $!authority;
     '';
 }
 
-multi method host(URI:D: Str() $host) returns Host {
+multi method host(URI:D: Str() $host --> Host ) {
     with $!authority {
         .host = $host;
     }
@@ -470,22 +470,22 @@ multi method host(URI:D: Str() $host) returns Host {
     }
 }
 
-method default-port(URI:D:) returns Port {
+method default-port(URI:D: --> Port ) {
     URI::DefaultPort.scheme-port($.scheme)
 }
-method default_port(URI:D:) returns Port { $.default-port } # artifact form
+method default_port(URI:D: --> Port ) { $.default-port } # artifact form
 
-multi method _port(URI:D:) returns Port {
+multi method _port(URI:D: --> Port ) {
     return .port with $!authority;
     Nil;
 }
 
-multi method _port(URI:D: Nil) returns Port {
+multi method _port(URI:D: Nil --> Port ) {
     .port = Nil with $!authority;
     Nil;
 }
 
-multi method _port(URI:D: Int() $port) returns Port {
+multi method _port(URI:D: Int() $port --> Port ) {
     with $!authority {
         .port = $port;
     }
@@ -497,13 +497,13 @@ multi method _port(URI:D: Int() $port) returns Port {
 }
 
 
-multi method port(URI:D:) returns Port { $._port // $.default-port }
+multi method port(URI:D: --> Port ) { $._port // $.default-port }
 
-multi method port(URI:D: |c) returns Port { self._port(|c) // $.default-port }
+multi method port(URI:D: |c --> Port ) { self._port(|c) // $.default-port }
 
 proto method authority(|c) { * }
 
-multi method authority(URI:D: Str() $authority) returns Authority:D {
+multi method authority(URI:D: Str() $authority --> Authority:D ) {
     my $gist;
     without $!authority {
         self!check-path(:has-authority,
@@ -521,7 +521,7 @@ multi method authority(URI:D: Str() $authority) returns Authority:D {
     $!authority = Authority.new($!grammar.parse-result);
 }
 
-multi method authority(URI:D: Nil) returns Authority:U {
+multi method authority(URI:D: Nil --> Authority:U ) {
     with $!authority {
         self!check-path(:!has-authority,
             source => self!gister(authority => ''),
@@ -535,9 +535,9 @@ multi method authority(URI:D: --> Authority ) is rw {
     $!authority;
 }
 
-multi method path(URI:D:) returns Path:D { $!path }
+multi method path(URI:D: --> Path:D ) { $!path }
 
-multi method path(URI:D: Str() $path) returns Path:D {
+multi method path(URI:D: Str() $path --> Path:D ) {
     if $path {
         my $comp = self!check-path(:$path,
             source => self!gister(:$path),
@@ -551,9 +551,9 @@ multi method path(URI:D: Str() $path) returns Path:D {
     }
 }
 
-multi method segments(URI:D:) returns List:D { $!path.segments }
+multi method segments(URI:D: --> List:D ) { $!path.segments }
 
-multi method segments(URI:D: @segments where *.elems > 0) returns List:D {
+multi method segments(URI:D: @segments where *.elems > 0 --> List:D ) {
     my $path = @segments.join('/');
     given self!gister(:$path) -> $source {
         for @segments -> $bad-segment {
@@ -574,7 +574,7 @@ multi method segments(URI:D: @segments where *.elems > 0) returns List:D {
     $!path.segments;
 }
 
-multi method segments(URI:D: $first-segment, *@remaining-segments) returns List:D {
+multi method segments(URI:D: $first-segment, *@remaining-segments --> List:D ) {
     my @segments = $first-segment, |@remaining-segments;
     self.segments(@segments);
 }
@@ -599,14 +599,14 @@ method relative {
     return Bool.new;
 }
 
-multi method query(URI:D:) returns URI::Query:D { $!query }
+multi method query(URI:D: --> URI::Query:D ) { $!query }
 
-multi method query(URI:D: Str() $new) returns URI::Query:D {
+multi method query(URI:D: Str() $new --> URI::Query:D ) {
     $!query.query($new);
     $!query
 }
 
-multi method query(URI:D: *@new, *%bad) returns URI::Query:D {
+multi method query(URI:D: *@new, *%bad --> URI::Query:D ) {
     warn 'The query was passed values as named arguments which are ignored. Did you mean to make sure your pairs were quoted or passed in a list instead?' if %bad;
 
     $!query.query-form(@new);
@@ -628,14 +628,14 @@ method query_form {
     $.query
 }
 
-method path-query(URI:D:) returns Str:D {
+method path-query(URI:D: --> Str:D ) {
     $.query ?? "$.path?$.query" !! "$.path"
 }
 
 method path_query { $.path-query } #artifact form
 
-multi method fragment(URI:D:) returns Fragment { return-rw $!fragment }
-multi method fragment(URI:D: Str() $new) returns Fragment { $!fragment = $new }
+multi method fragment(URI:D: --> Fragment ) { return-rw $!fragment }
+multi method fragment(URI:D: Str() $new --> Fragment ) { $!fragment = $new }
 
 method frag(URI:D:) { $.fragment }
 
@@ -655,8 +655,8 @@ method !gister(
     $s;
 }
 
-multi method gist(URI:D:) returns Str:D { self!gister }
-multi method Str(URI:D:) returns Str:D { $.gist }
+multi method gist(URI:D: --> Str:D ) { self!gister }
+multi method Str(URI:D: --> Str:D ) { $.gist }
 
 # chunks now strongly deprecated
 # it's segments in p5 URI and segment is part of rfc so no more chunks soon!
