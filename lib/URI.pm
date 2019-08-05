@@ -365,8 +365,7 @@ our sub split-query(
 our sub split_query(|c) { split-query(|c) }
 
 # deprecated old call for parse
-method init ($str) {
-    warn "init method now deprecated in favor of parse method";
+method init ($str) is DEPRECATED("parse") {
     $.parse($str);
 }
 
@@ -613,18 +612,14 @@ multi method query(URI:D: *@new, *%bad --> URI::Query:D ) {
     $!query
 }
 
-multi method query-form(URI:D:) {
-    warn 'query-form is deprecated, use query instead';
-    $!query
-}
 
-multi method query-form(URI:D: |c) {
-    warn 'query-form is deprecated, use query instead';
+proto method query-form(|c) { * }
+
+multi method query-form(URI:D: |c) is DEPRECATED("method query") {
     $!query.query-form(|c)
 }
 
-method query_form {
-    warn 'query_form is deprecated, use query intead';
+method query_form() is DEPRECATED("method query")  {
     $.query
 }
 
@@ -660,13 +655,11 @@ multi method Str(URI:D: --> Str:D ) { $.gist }
 
 # chunks now strongly deprecated
 # it's segments in p5 URI and segment is part of rfc so no more chunks soon!
-method chunks {
-    warn "chunks attribute now deprecated in favor of segments";
+method chunks() is DEPRECATED("method segments") {
     $!path.segments;
 }
 
-method uri {
-    warn "uri attribute now deprecated in favor of .grammar.parse-result";
+method uri() is DEPRECATED("parse-result") {
     $!uri;
 }
 
