@@ -17,7 +17,7 @@ install:
   - git clone https://github.com/tadzik/rakudobrew %USERPROFILE%\rakudobrew
   - SET PATH=%USERPROFILE%\rakudobrew\bin;%PATH%
   - rakudobrew build moar %TEST_MOAR%
-  - SET PATH=%USERPROFILE%\rakudobrew\versions\moar-%TEST_MOAR%\install\bin:%PATH%
+  - SET PATH=%USERPROFILE%\rakudobrew\versions\moar-%TEST_MOAR%\install\bin;%PATH%
   - rakudobrew build zef
   - cd %APPVEYOR_BUILD_FOLDER%
   - zef --depsonly install .
