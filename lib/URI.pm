@@ -75,7 +75,7 @@ class Path {
         my $path-type = @rules.first({ $comp{ $_ }.defined });
         my $path = $comp{ $path-type };
 
-        my @segments := $path<segment>.list.map({.Str}).List || ('', );
+        my @segments := $path<segment>.list.grep(*.defined).map({.Str}).List || ('', );
         if $path<segment-nz-nc> || $path<segment-nz> -> $first-chunk {
             @segments := ($first-chunk.Str, |@segments);
         }
