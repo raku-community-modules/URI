@@ -1,3 +1,9 @@
+2019-08-25  v0.3.0
+
+	* Allow mutation of a URI in user code
+
+	This contains potentially incompatible changes. Please see README.md
+
 2019-06-29  v0.2.2
 
 	* Fix double encoding of path parts

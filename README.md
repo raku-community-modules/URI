@@ -1,4 +1,4 @@
-﻿Perl6 realization of URI - Uniform Resource Identifiers handler
+﻿# Perl6 realization of URI - Uniform Resource Identifiers handler
 
 A URI implementation using Perl 6 grammars to implement RFC 3986 BNF. 
 Currently only implements parsing.  Includes URI::Escape to (un?)escape
@@ -64,6 +64,22 @@ character numbering.
 
 ### Status
 [![Build Status](https://travis-ci.org/perl6-community-modules/uri.png)](https://travis-ci.org/perl6-community-modules/uri)
+
+### POTENTIALLY INCOMPATIBLE CHANGES BETWEEN v0.2.2 and v0.3.0
+
+The v0.3.0 introduced the ability to mutate the parts of an existing URI, which in turn may have introduced changes which are incompatible with existing applications:
+
+  * URI.query now returns an object of type URI::Query not a Str
+    The object will coerce correctly when interpolated into a string but will need an explicit .Str coercion if being assigned to a Str typed variable.
+
+  * URI.path now returns an object of type URI::Path not a Str
+    The object will coerce correctly when interpolated into a string but will need an explicit .Str coercion if being assigned to a Str typed variable.
+
+  * URI.query-form no longer returns a Hash but an object of URI::Query
+    The object does the Associative role so for the most part can be treated like a Hash but an explicit .Hash coercion may be required when comparing with another Hash or when merging with another Hash.
+    Some uses of query-form have been marked as deprecated and should use .query instead.
+
+The changes have been tested with the majority of modules that depend on URI and only a few required changes.
 
 DESCRIPTION
 ===========
@@ -814,6 +830,7 @@ Contributors to this module include:
 COPYRIGHT & LICENSE
 ===================
 
-Copyright 2017 Ronald Schmidt.
+Copyright © 2017 Ronald Schmidt.
+          © 2015 - Perl6 Community Authors
 
-This software is licensed under the same license as Perl 6 itself.
+This software is licensed under the same license as Perl 6 itself, please see the [LICENSE](LICENSE) file.
