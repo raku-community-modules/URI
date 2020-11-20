@@ -3,7 +3,7 @@
     "name"        : "URI",
     "license"     : "Artistic-2.0",
     "version"     : "0.3.0",
-    "description" : "A URI implementation using Perl 6 grammars to implement RFC 3986 BNF",
+    "description" : "A URI implementation using Raku grammars to implement RFC 3986 BNF",
     "license"     : "Artistic-2.0",
     "depends"     : [ ],
     "provides" : {
@@ -17,11 +17,11 @@
         "URI::Escape"             : "lib/URI/Escape.pm",
         "URI::DefaultPort"        : "lib/URI/DefaultPort.pm"
     },
-    "source-url"    : "git://github.com/perl6-community-modules/uri.git",
+    "source-url"    : "git://github.com/raku-community-modules/URI.git",
     "authors"       : ["Perl 6 community"],
     "meta-version" : 1,
     "support"       : {
-        "source"   : "https://github.com/perl6-community-modules/uri.git",
-        "bugtracker" : "https://github.com/perl6-community-modules/uri/issues"
+        "source"   : "https://github.com/raku-community-modules/URI.git",
+        "bugtracker" : "https://github.com/raku-community-modules/URI/issues"
     }
 }
