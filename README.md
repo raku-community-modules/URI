@@ -1,6 +1,6 @@
-﻿# Perl6 realization of URI - Uniform Resource Identifiers handler
+﻿# Raku realization of URI - Uniform Resource Identifiers handler
 
-A URI implementation using Perl 6 grammars to implement RFC 3986 BNF. 
+A URI implementation using Raku grammars to implement RFC 3986 BNF. 
 Currently only implements parsing.  Includes URI::Escape to (un?)escape
 characters that aren't otherwise allowed in a URI with % and a hex
 character numbering.
@@ -831,6 +831,6 @@ COPYRIGHT & LICENSE
 ===================
 
 Copyright © 2017 Ronald Schmidt.
-          © 2015 - Perl6 Community Authors
+          © 2015 - Raku Community Authors
 
-This software is licensed under the same license as Perl 6 itself, please see the [LICENSE](LICENSE) file.
+This software is licensed under the same license as Raku itself, please see the [LICENSE](LICENSE) file.
