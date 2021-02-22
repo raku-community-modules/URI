@@ -1,8 +1,9 @@
 {
     "perl"        : "6.*",
+    "raku"        : "6.*",
     "name"        : "URI",
     "license"     : "Artistic-2.0",
-    "version"     : "0.3.0",
+    "version"     : "0.3.1",
     "description" : "A URI implementation using Raku grammars to implement RFC 3986 BNF",
     "license"     : "Artistic-2.0",
     "depends"     : [ ],

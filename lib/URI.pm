@@ -1,4 +1,4 @@
-unit class URI:auth<github:perl6-community-modules>:ver<v0.3.0>;
+unit class URI:auth<github:perl6-community-modules>:ver<v0.3.1>;
 
 use IETF::RFC_Grammar;
 use IETF::RFC_Grammar::URI;
