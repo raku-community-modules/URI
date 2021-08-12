@@ -1,9 +1,14 @@
+use URI::Path;
+use URI::Query;
+
 unit class URI:auth<github:perl6-community-modules>:ver<v0.3.1>;
 
 use IETF::RFC_Grammar;
 use IETF::RFC_Grammar::URI;
 use URI::Escape;
 need URI::DefaultPort;
+
+constant &split-query is export(:split-query) = &URI::Query::split-query;
 
 class X::URI::Invalid is Exception {
     has $.source;
@@ -54,193 +59,7 @@ class Authority {
     multi method Str(Authority:D: --> Str ) { $.gist }
 }
 
-# Because Path is limited in form based on factors outside of it, it doesn't
-# actually provide any validation within itself. As such, this type is immutable
-# to prevent a problem. This could be made mutable if it is given a reference to
-# the parent URI class. The URI class is responsible for performing the
-# necessary validations.
-class Path {
-    has Str $.path;
-    has @.segments;
 
-    my @rules = <
-        path-abempty
-        path-absolute
-        path-noscheme
-        path-rootless
-        path-empty
-    >;
-
-    multi method new(Path:U: Match:D $comp, :$scheme) {
-        my $path-type = @rules.first({ $comp{ $_ }.defined });
-        my $path = $comp{ $path-type };
-
-        my @segments := $path<segment>.list.map({.Str}).List || ('', );
-        if $path<segment-nz-nc> || $path<segment-nz> -> $first-chunk {
-            @segments := ($first-chunk.Str, |@segments);
-        }
-
-        if "$path".starts-with('/') {
-            @segments := ('', |@segments);
-        }
-
-        $path = "$path";
-
-        if $scheme and  $scheme ~~ /http/ {
-            $path = $path.split("/").map( { uri-escape( uri-unescape($_) ) } ).join("/"); # Reconstruct path
-        }
-
-
-        self.new(:$path, :@segments);
-    }
-
-    submethod BUILD(:$!path = '', :@segments = ('',)) {
-        @!segments := @segments.List;
-    }
-
-    multi method gist(Path:D: --> Str ) { $!path }
-    multi method Str(Path:D: --> Str )  { $!path }
-}
-
-class Query does Positional does Associative does Iterable {
-    our subset ValidQuery of Str
-        where /^ <IETF::RFC_Grammar::URI::query> $/;
-
-    our enum HashFormat <None Mixed Singles Lists>;
-
-    has HashFormat $.hash-format is rw;
-    has ValidQuery $!query;
-    has Pair @!query-form;
-
-    multi method new(Str() $query, :$hash-format = Lists) {
-        self.new(:$query, :$hash-format);
-    }
-
-    submethod BUILD(:$!query = '', :@!query-form, :$!hash-format = Lists) {
-        die "When calling URI::Query.new set either :query or :query-form, but not both."
-            if @!query-form and $!query;
-
-        @!query-form = split-query($!query) if $!query;
-    }
-
-    method !value-for($key) {
-        # TODO Is there a better way to make this list immutable than to use a
-        # Proxy container?
-        my $l = @!query-form.grep({ .key eq $key }).map({
-            my $v = .value;
-            Proxy.new(
-                FETCH => method () { $v },
-                STORE => method ($n) { X::Assignment::RO.new.throw },
-            );
-        }).List;
-
-        given $!hash-format {
-            when Mixed   { $l.elems == 1 ?? $l[0] !! $l }
-            when Singles { $l.first(:end) }
-            default      { $l }
-        }
-    }
-
-    method of() { Pair }
-    method iterator(Query:D:) { @!query-form.iterator }
-
-    # positional context
-    method AT-POS(Query:D: $i)     { @!query-form[$i] }
-    method EXISTS-POS(Query:D: $i) { @!query-form[$i]:exists }
-    method ASSIGN-POS(Query:D: $i, Pair $p) {
-        $!query = Nil;
-        @!query-form[$i] = $p;
-    }
-    method DELETE-POS(Query:D: $i) {
-        $!query = Nil;
-        @!query-form[$i]:delete
-    }
-
-    # associative context
-    method AT-KEY(Query:D: $k)     { self!value-for($k) }
-    method EXISTS-KEY(Query:D: $k) { @!query-form.first({ .key eq $k }).defined }
-    method ASSIGN-KEY(Query:D: $k, $value) {
-        $!query = Nil;
-        @!query-form .= grep({ .key ne $k });
-
-        given $!hash-format {
-            when Singles {
-                @!query-form.push: $k => $value;
-            }
-            default {
-                @!query-form.append: $value.list.map({ $k => $^v });
-            }
-        }
-
-        $value
-    }
-    method DELETE-KEY(Query:D: $k) {
-        $!query = Nil;
-        my $r = self!value-for($k);
-        my @ps = @!query-form .= grep({ .key ne $k });
-        $r;
-    }
-
-    # Hash-like readers
-    method keys(Query:D:) { @!query-form.map(*.key) }
-    method values(Query:D:) { @!query-form.map(*.value) }
-    method kv(Query:D:) { @!query-form.map(*.kv).flat }
-    method pairs(Query:D:) { @!query-form }
-
-    # Array-like manipulators
-    method pop(Query:D:) { $!query = Nil; @!query-form.pop }
-    method push(Query:D: |c) { $!query = Nil; @!query-form.push: |c }
-    method append(Query:D: |c) { $!query = Nil; @!query-form.append: |c }
-    method shift(Query:D:) { $!query = Nil; @!query-form.shift }
-    method unshift(Query:D: |c) { $!query = Nil; @!query-form.unshift: |c }
-    method prepend(Query:D: |c) { $!query = Nil; @!query-form.prepend: |c }
-    method splice(Query:D: |c) { $!query = Nil; @!query-form.splice: |c }
-
-    # Array-like readers
-    method elems(Query:D:) { @!query-form.elems }
-    method end(Query:D:) { @!query-form.end }
-
-    method Bool(Query:D: |c) { @!query-form.Bool }
-    method Int(Query:D: |c) { @!query-form.Int }
-    method Numeric(Query:D: |c) { @!query-form.Numeric }
-
-    multi method query(Query:D:) {
-        return $!query with $!query;
-        $!query = @!query-form.grep({ .defined }).map({
-            if .value eqv True {
-                "{uri-escape(.key)}="
-            }
-            else {
-                "{uri-escape(.key)}={uri-escape(.value)}"
-            }
-        }).join('&');
-
-        # If there's only one pair => True, drop the =
-        # so end with "foo" not "foo=" but keep "foo=&bar="
-        # If someone is pickier, they should set $!query directly.
-        $!query ~~ s/'=' $// unless $!query ~~ /'&'/;
-
-        $!query;
-    }
-
-    multi method query(Query:D: Str() $new) {
-        $!query = $new;
-        @!query-form = split-query($!query);
-        $!query;
-    }
-
-    multi method query-form(Query:D:) { @!query-form }
-
-    multi method query-form(Query:D: *@new, *%new) {
-        $!query = Nil;
-        @!query-form = flat %new, @new;
-    }
-
-    # string context
-    multi method gist(Query:D: --> Str ) { $.query }
-    multi method Str(Query:D: --> Str ) { $.gist }
-
-}
 
 our subset Fragment of Str
     where /^ <IETF::RFC_Grammar::URI::fragment> $/;
@@ -300,69 +119,6 @@ method parse(URI:D: Str() $str, Bool :$match-prefix = $!match-prefix) {
 
     $!path = Path.new($comp_container, :$!scheme);
 }
-
-our sub split-query(
-    Str() $query,
-    :$hash-format is copy = Query::None,
-) is export(:split-query) {
-    $hash-format = Query::None  if $hash-format eqv False;
-    $hash-format = Query::Lists if $hash-format eqv True;
-
-    my @query-form = gather for $query.split(/<[&;]>/) {
-        # when the query component contains abc=123 form
-        when /'='/ {
-            my ($k, $v) = .split('=', 2).map(&uri-unescape);
-            take $k => $v;
-        }
-
-        # or if the component contains just abc
-        when /./ {
-            take $_ => True;
-        }
-    }
-
-    given $hash-format {
-        when Query::Mixed {
-            my %query-form;
-
-            for @query-form -> $qp {
-                if %query-form{ $qp.key }:exists {
-                    if %query-form{ $qp.key } ~~ Array {
-                        %query-form{ $qp.key }.push: $qp.value;
-                    }
-                    else {
-                        %query-form{ $qp.key } = [
-                            %query-form{ $qp.key },
-                            $qp.value,
-                        ];
-                    }
-                }
-                else {
-                    %query-form{ $qp.key } = $qp.value;
-                }
-            }
-
-            return %query-form;
-        }
-
-        when Query::Singles {
-            return %(@query-form);
-        }
-
-        when Query::Lists {
-            my %query-form;
-            %query-form{ .key }.push: .value for @query-form;
-            return %query-form;
-        }
-
-        default {
-            return @query-form;
-        }
-    }
-}
-
-# artifact form
-our sub split_query(|c) { split-query(|c) }
 
 # deprecated old call for parse
 method init ($str) is DEPRECATED("parse") {
