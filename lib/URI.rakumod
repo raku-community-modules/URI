@@ -334,23 +334,19 @@ multi method segments(URI:D: $first-segment, *@remaining-segments --> List:D ) {
     self.segments(@segments);
 }
 
-my $warn-deprecate-abs-rel = q:to/WARN-END/;
-    The absolute and relative methods are artifacts carried over from an old
-    version of the p6 module.  The perl 5 module does not provide such
-    functionality.  The Ruby equivalent just checks for the presence or
-    absence of a scheme.  The URI rfc does identify absolute URIs and
-    absolute URI paths and these methods somewhat confused the two.  Their
-    functionality at the URI level is no longer seen as needed and is
-    being removed.
-WARN-END
+# The absolute and relative methods are artifacts carried over from an old
+# version of the p6 module.  The perl 5 module does not provide such
+# functionality.  The Ruby equivalent just checks for the presence or
+# absence of a scheme.  The URI rfc does identify absolute URIs and
+# absolute URI paths and these methods somewhat confused the two.  Their
+# functionality at the URI level is no longer seen as needed and is
+# being removed.
 
-method absolute {
-    warn "deprecated -\n$warn-deprecate-abs-rel";
+method absolute is DEPRECATED {
     return Bool.new;
 }
 
-method relative {
-    warn "deprecated -\n$warn-deprecate-abs-rel";
+method relative is DEPRECATED {
     return Bool.new;
 }
 
