@@ -41,9 +41,19 @@ multi method new(URI::Path:U: Match:D $comp, :$scheme) {
     self.new(:$path, :@segments);
 }
 
-submethod BUILD(:$!path = '', :@segments = ('',)) {
+submethod BUILD(:$!path = '', :@segments = $!path.split('/')) {
     @!segments := @segments.List;
 }
 
 multi method gist(URI::Path:D: --> Str ) { $!path }
 multi method Str(URI::Path:D: --> Str )  { $!path }
+
+method rel2abs(URI::Path:D: Str:D() $base) {
+    if $!path.starts-with('/') {
+        self;
+    }
+    else {
+        my $path = $base.subst(rx{"/"*$}, '')  ~ '/' ~ $!path;
+        self.new: :$path;
+    }
+}

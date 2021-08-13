@@ -62,9 +62,6 @@ character numbering.
     }
 
 
-### Status
-[![Build Status](https://travis-ci.org/perl6-community-modules/uri.png)](https://travis-ci.org/perl6-community-modules/uri)
-
 ### POTENTIALLY INCOMPATIBLE CHANGES BETWEEN v0.2.2 and v0.3.0
 
 The v0.3.0 introduced the ability to mutate the parts of an existing URI, which in turn may have introduced changes which are incompatible with existing applications:
@@ -380,6 +377,22 @@ method gist
 
 Reconstructs the URI from the components and returns it as a string.
 
+method is-relative
+-----------------
+
+    method is-relative returns Bool
+
+A URI is considered relative, if it doesn't include a scheme or a host and and its path generally refers to an HTML document on the same machine as any current document;
+
+method rel2abs
+-------------
+
+    method rel2abs(URI:D: URI:D $base) returns URI:D
+
+If the URI object is relative, this method constructs a new URI by cloning `$base` with a new cloned from  $base, but with path constructed by calling `$base.path.rel2abs(self.path)`
+
+If the URI object is not relative, it is returned unaltered.
+
 method Str
 ----------
 
@@ -537,6 +550,14 @@ Returns the string representation of the path.
     method segments(URI::Path:D:) returns List:D
 
 Returns a list representation of the path segments. In a URI, the path segments are the strings between slashes ("/").
+
+### method rel2abs
+
+    method rel2abs(URI::Path:D: URI::Path:D $base) returns URI::Path:D
+
+Compute a new path by appending the path object's path to base.
+
+If the path object already is absolute (has a leading '/'), it is returned unaltered.
 
 ### method gist
 

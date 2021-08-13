@@ -350,6 +350,19 @@ method relative is DEPRECATED {
     return Bool.new;
 }
 
+method is-absolute { so ($!scheme || $.host) }
+method is-relative { ! so ($!scheme || $.host) }
+
+method rel2abs(URI:D: URI:D $base --> URI:D) {
+    if $.is-absolute {
+        self;
+    }
+    else {
+        my URI::Path $path = $!path.rel2abs($base);
+        $base.clone: :$path;
+    }
+}
+
 multi method query(URI:D: --> URI::Query:D ) { $!query }
 
 multi method query(URI:D: Str() $new --> URI::Query:D ) {
