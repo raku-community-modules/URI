@@ -1,7 +1,7 @@
 use URI::Path;
 use URI::Query;
 
-unit class URI:auth<github:perl6-community-modules>:ver<v0.3.1>;
+unit class URI:auth<github:perl6-community-modules>:ver<v0.3.2>;
 
 use IETF::RFC_Grammar;
 use IETF::RFC_Grammar::URI;
@@ -141,6 +141,8 @@ multi method new(URI:U: $uri, Bool :$match-prefix) {
 multi method new(URI:U: :$uri, Bool :$match-prefix) {
     self.new($uri, :$match-prefix);
 }
+
+multi method COERCE(Str:D $uri) { self.new($uri) }
 
 method has-scheme(URI:D: --> Bool:D ) {
     $!scheme.chars > 0;

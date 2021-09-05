@@ -495,7 +495,7 @@ URI::Authority
 
 The `authority` method of a URI constructs or returns this object.
 
-It is recommended that you do not costruct a `URI::Authority` object directly, but let the methods of `URI` handle construction.
+It is recommended that you do not construct a `URI::Authority` object directly, but let the methods of `URI` handle construction.
 
 ### method userinfo
 
