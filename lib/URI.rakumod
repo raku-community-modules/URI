@@ -294,17 +294,22 @@ multi method authority(URI:D: --> Authority ) is rw {
 
 multi method path(URI:D: --> Path:D ) { $!path }
 
-multi method path(URI:D: Str() $path --> Path:D ) {
+method !make-path(Str $path --> Path:D ) {
     if $path {
-        my $comp = self!check-path(:$path,
+        my $comp = self!check-path(
+            :$path,
             source => self!gister(:$path),
         );
 
-        $!path = Path.new($comp);
+       Path.new($comp);
     }
     else {
-        $!path = Path.new;
+        Path.new;
     }
+}    
+
+multi method path(URI:D: Str() $path --> Path:D ) {
+    $!path = self!make-path($path);
 }
 
 multi method segments(URI:D: --> List:D ) { $!path.segments }
@@ -358,7 +363,7 @@ method directory(URI:D:) {
     my Str $dir = $!path.Str;
     $dir .= subst(/<- [/]>*$/, '');
     $dir ||= self.is-absolute ?? '/' !! './';
-    my Path $path = self.path($dir);
+    my Path $path = self!make-path($dir);
     self.clone: :$path;
 }
 
