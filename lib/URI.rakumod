@@ -1,7 +1,7 @@
 use URI::Path;
 use URI::Query;
 
-unit class URI:auth<github:perl6-community-modules>:ver<v0.3.2>;
+unit class URI:auth<github:raku-community-modules>:ver<v0.3.3>;
 
 use IETF::RFC_Grammar;
 use IETF::RFC_Grammar::URI;
@@ -300,7 +300,6 @@ multi method path(URI:D: Str() $path --> Path:D ) {
             source => self!gister(:$path),
         );
 
-
         $!path = Path.new($comp);
     }
     else {
@@ -353,7 +352,15 @@ method relative is DEPRECATED {
 }
 
 method is-absolute { so ($!scheme || $.host) }
-method is-relative { ! so ($!scheme || $.host) }
+method is-relative { ! $.is-absolute }
+
+method directory(URI:D:) {
+    my Str $dir = $!path.Str;
+    $dir .= subst(/<- [/]>*$/, '');
+    $dir ||= self.is-absolute ?? '/' !! './';
+    my Path $path = self.path($dir);
+    self.clone: :$path;
+}
 
 method rel2abs(URI:D: URI:D $base --> URI:D) {
     if $.is-absolute {
