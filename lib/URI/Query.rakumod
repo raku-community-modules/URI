@@ -96,7 +96,7 @@ method !value-for($key) {
         my $v = .value;
         Proxy.new(
             FETCH => method () { $v },
-            STORE => method ($n) { X::Assignment::RO.new.throw },
+            STORE => method ($n) { X::Assignment::RO.new(:value($v)).throw },
         );
     }).List;
 
