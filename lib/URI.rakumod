@@ -1,7 +1,7 @@
 use URI::Path;
 use URI::Query;
 
-unit class URI:auth<github:raku-community-modules>:ver<v0.3.3>;
+unit class URI:auth<github:raku-community-modules>:ver<v0.3.4>;
 
 use IETF::RFC_Grammar;
 use IETF::RFC_Grammar::URI;
@@ -301,7 +301,7 @@ method !make-path(Str $path --> Path:D ) {
             source => self!gister(:$path),
         );
 
-       Path.new($comp);
+        Path.new($comp);
     }
     else {
         Path.new;
