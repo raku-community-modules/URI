@@ -1,7 +1,7 @@
 use URI::Path;
 use URI::Query;
 
-unit class URI:auth<github:raku-community-modules>:ver<v0.3.4>;
+unit class URI:auth<github:raku-community-modules>:ver<v0.3.5>;
 
 use IETF::RFC_Grammar;
 use IETF::RFC_Grammar::URI;
@@ -306,7 +306,7 @@ method !make-path(Str $path --> Path:D ) {
     else {
         Path.new;
     }
-}    
+}
 
 multi method path(URI:D: Str() $path --> Path:D ) {
     $!path = self!make-path($path);
