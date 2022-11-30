@@ -49,8 +49,7 @@ class Authority {
     }
 
     multi method gist(Authority:D: --> Str ) {
-        my $authority = '';
-        $authority ~= "$!userinfo@" if $!userinfo;
+        my $authority = "$!userinfo@" if $!userinfo;
         $authority ~= $!host;
         $authority ~= ":$!port" if $!port;
         $authority;
