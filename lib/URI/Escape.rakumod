@@ -1,5 +1,3 @@
-use v6;
-
 unit package URI::Escape;
 
 use IETF::RFC_Grammar::URI;

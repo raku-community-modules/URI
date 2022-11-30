@@ -1,5 +1,3 @@
-use v6;
-
 # Taken/Copied with relatively minor translation to Perl6
 # from RFC 3986 (http://www.ietf.org/rfc/rfc3986.txt)
 

@@ -1,5 +1,3 @@
-use v6;
-
 # This logic seems to belong somewhere related to URI but not in the URI
 # module itself.
 
