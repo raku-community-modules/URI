@@ -1,4 +1,4 @@
-# Raku realization of URI - Uniform Resource Identifiers handler
+# Raku realization of URI - Uniform Resource Identifiers handler [![test](https://github.com/raku-community-modules/URI/actions/workflows/test.yml/badge.svg)](https://github.com/raku-community-modules/URI/actions/workflows/test.yml)
 
 A URI implementation using Raku grammars to implement RFC 3986 BNF. 
 Currently only implements parsing.  Includes URI::Escape to (un?)escape
