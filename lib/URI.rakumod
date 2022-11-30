@@ -114,11 +114,6 @@ method parse(URI:D: Str() $str, Bool :$match-prefix = $!match-prefix) {
     $!path = Path.new($comp_container, :$!scheme);
 }
 
-# deprecated old call for parse
-method init ($str) is DEPRECATED("parse") {
-    $.parse($str);
-}
-
 # new can pass alternate grammars some day ...
 submethod BUILD(:$match-prefix) {
     $!match-prefix = ? $match-prefix;
