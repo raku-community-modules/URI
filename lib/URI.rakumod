@@ -72,7 +72,6 @@ has Authority $.authority is rw;
 has Query $.query = Query.new('');
 has Fragment $.fragment is rw = '';
 has %!query-form; # cache query-form
-has $!uri;  # use of this now deprecated
 
 method parse(URI:D: Str() $str, Bool :$match-prefix = $!match-prefix) {
 
@@ -86,7 +85,6 @@ method parse(URI:D: Str() $str, Bool :$match-prefix = $!match-prefix) {
     $!path      = Path.new;
     $!query.query('');
     $!fragment  = '';
-    $!uri = Mu;
 
     $!match-prefix = $match-prefix;
     if $!match-prefix {
@@ -100,9 +98,6 @@ method parse(URI:D: Str() $str, Bool :$match-prefix = $!match-prefix) {
     if (not $!grammar.parse-result) {
         X::URI::Invalid.new(source => $str).throw
     }
-
-    # now deprecated
-    $!uri = $!grammar.parse-result;
 
     my $comp_container = $!grammar.parse-result<URI-reference><URI> ||
         $!grammar.parse-result<URI-reference><relative-ref>;
@@ -435,10 +430,6 @@ multi method Str(URI:D: --> Str:D ) { $.gist }
 # it's segments in p5 URI and segment is part of rfc so no more chunks soon!
 method chunks() is DEPRECATED("method segments") {
     $!path.segments;
-}
-
-method uri() is DEPRECATED("parse-result") {
-    $!uri;
 }
 
 multi method query-form() { $!query }
