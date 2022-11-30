@@ -19,7 +19,7 @@
         "URI::DefaultPort"        : "lib/URI/DefaultPort.rakumod"
     },
     "source-url"    : "git://github.com/raku-community-modules/URI.git",
-    "authors"       : ["Perl 6 community"],
+    "authors"       : ["Raku community"],
     "meta-version" : 1,
     "support"       : {
         "source"   : "https://github.com/raku-community-modules/URI.git",
