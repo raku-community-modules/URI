@@ -7,27 +7,25 @@ on:
     tags-ignore:
       - '*'
   pull_request:
+  workflow_dispatch:
 
 jobs:
   raku:
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
-          - macOS-latest
+          - macos-latest
           - windows-latest
         raku-version:
-          - 'latest'
-          - '2021.12'
+          - "latest"
+          - "2023.08"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: Raku/setup-raku@v1
         with:
           raku-version: ${{ matrix.raku-version }}
-      - name: Install Dependencies
-        run: |
-          zef install --/test App::Prove6
-          zef install --deps-only .
-      - name: Run Tests
-        run: prove6 -I. t
+      - name: Run tests and Install
+        run: zef install . --debug
