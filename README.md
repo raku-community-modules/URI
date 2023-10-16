@@ -854,4 +854,4 @@ COPYRIGHT & LICENSE
 Copyright © 2017 Ronald Schmidt.
           © 2015 - Raku Community Authors
 
-This software is licensed under the same license as Raku itself, please see the [LICENSE](LICENSE) file.
+This software is licensed under the [Artistic 2.0 License](LICENSE).
