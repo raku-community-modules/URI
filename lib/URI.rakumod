@@ -1207,4 +1207,3 @@ This software is licensed under the same license as Raku itself.
 =end pod
 
 
-# vim:ft=perl6

@@ -49,4 +49,3 @@ URI::DefaultPort - Stores the default ports for various services
 
 =end pod
 
-# vim:ft=perl6

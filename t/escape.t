@@ -27,4 +27,3 @@ is uri-unescape("%40A%42", "CDE", "F%47++H"), ['@AB', 'CDE', 'FG  H'],
     'unescape list';
 ok not uri-escape(Str).defined, 'undef returns undef';
 
-# vim:ft=perl6

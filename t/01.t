@@ -116,4 +116,3 @@ my Str $user-info = URI.new(
 is( uri-unescape($user-info), 'user,n:deprecatedpwd',
     'extracted userinfo correctly');
 
-# vim:ft=perl6

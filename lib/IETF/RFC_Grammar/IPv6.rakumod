@@ -34,4 +34,3 @@ token dec-octet         {
 }
     
 
-# vim:ft=perl6

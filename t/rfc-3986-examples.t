@@ -46,4 +46,3 @@ $u.parse('urn:oasis:names:specification:docbook:dtd:xml:4.1.2');
 is($u.scheme, 'urn', 'urn scheme');
 is($u.path, 'oasis:names:specification:docbook:dtd:xml:4.1.2', 'urn path');
 
-# vim:ft=perl6

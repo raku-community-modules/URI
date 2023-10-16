@@ -82,4 +82,3 @@ URI::Escape - Escape and unescape unsafe characters
 
 =end pod
 
-# vim:ft=perl6
