@@ -1,3 +1,11 @@
+2023-10-17  v0.3.7
+
+    * File extensions now follow the Raku conventions
+    * References also follow the Raku terminology
+    * Remove Vim highlighter pragmas from the sources
+    * The dist consistently uses v6.d semantics
+    * Some polishing in the META6 file
+
 2022-11-30  v0.3.6
 
     * A few minors have been skipped, but I don't think there are major changes

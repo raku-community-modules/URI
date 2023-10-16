@@ -1,10 +1,8 @@
 {
-    "perl"        : "6.*",
-    "raku"        : "6.*",
+    "raku"        : "6.d",
     "name"        : "URI",
-    "license"     : "Artistic-2.0",
     "auth"        : "zef:raku-community-modules",
-    "version"     : "0.3.6",
+    "version"     : "0.3.7",
     "description" : "A URI implementation using Raku grammars to implement RFC 3986 BNF",
     "license"     : "Artistic-2.0",
     "depends"     : [ ],
@@ -19,7 +17,7 @@
         "URI::Escape"             : "lib/URI/Escape.rakumod",
         "URI::DefaultPort"        : "lib/URI/DefaultPort.rakumod"
     },
-    "source-url"    : "git://github.com/raku-community-modules/URI.git",
+    "source-url"    : "https://github.com/raku-community-modules/URI.git",
     "authors"       : ["Raku community"],
     "meta-version" : 1,
     "support"       : {
