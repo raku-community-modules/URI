@@ -27,7 +27,7 @@ plan +@t;
 for @t {
     my $ans = uri-unescape( ~.key );
     ok( $ans eq .value, 'Decoding ' ~ .key )
-        or say "GOT: {$ans.perl}\nEXPECTED: {.value.perl}";
+        or say "GOT: {$ans.raku}\nEXPECTED: {.value.raku}";
 
 }
 
