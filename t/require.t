@@ -1,6 +1,6 @@
-#!/usr/bin/env perl6
+#!/usr/bin/env raku
 
-use v6.c;
+use v6.d;
 
 use Test;
 plan 2;

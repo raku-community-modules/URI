@@ -1,3 +1,4 @@
+use v6.d;
 unit class URI::Query
     does Positional
     does Associative

@@ -1,4 +1,4 @@
-use v6;
+use v6.d;
 
 # lifted more or less completely from the Novemver project
 # just now uses URI::Escape rather than November::CGI

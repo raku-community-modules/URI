@@ -1,3 +1,4 @@
+use v6.d;
 use URI::Path;
 use URI::Query;
 

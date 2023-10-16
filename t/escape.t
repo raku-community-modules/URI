@@ -1,4 +1,4 @@
-use v6;
+use v6.d;
 
 # Copied, with minor translation to Perl6, from the escape.t file
 # in the CPAN URI distribution

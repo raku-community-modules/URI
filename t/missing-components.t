@@ -1,3 +1,4 @@
+use v6.d;
 use Test;
 use URI;
 use IETF::RFC_Grammar::URI;
