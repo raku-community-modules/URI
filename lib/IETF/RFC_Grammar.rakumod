@@ -8,6 +8,7 @@ unit class IETF::RFC_Grammar;
 my %rfc_grammar_build = (
      'rfc3986' => 'IETF::RFC_Grammar::URI'
 );
+my $rfc_grammar_lock = Lock.new;
 my %rfc_grammar;
 
 # Hack to give hint to ufo/Panda to build in the right order.
@@ -31,17 +32,19 @@ submethod BUILD(:$!rfc, :$!grammar) {}
 method new(Str $rfc, $grammar?) {
     my $init_grammar = $grammar;
 
-    if (
-        (! $init_grammar.can('parse'))  and
-        %rfc_grammar_build{$rfc}:exists;
-    ) {
-        unless %rfc_grammar{$rfc}:exists {
-            my $module = %rfc_grammar_build{$rfc};
-            # less disruptive fix to RT126390
-            unless ($rfc eq 'rfc3986') { require ::($module); }
-            %rfc_grammar{$rfc} = ::($module);
+    $rfc_grammar_lock.protect: {
+        if (
+            (! $init_grammar.can('parse'))  and
+            %rfc_grammar_build{$rfc}:exists;
+        ) {
+            unless %rfc_grammar{$rfc}:exists {
+                my $module = %rfc_grammar_build{$rfc};
+                # less disruptive fix to RT126390
+                unless ($rfc eq 'rfc3986') { require ::($module); }
+                %rfc_grammar{$rfc} = ::($module);
+            }
+            $init_grammar = %rfc_grammar{$rfc};
         }
-        $init_grammar = %rfc_grammar{$rfc};
     }
     if (! $init_grammar.can('parse')) {
         die "Need either rfc with known grammar or grammar";
