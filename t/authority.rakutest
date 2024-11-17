@@ -1,6 +1,7 @@
-use v6.d;
 use Test;
 use URI;
+
+plan 21;
 
 my $u = URI.new('foo://me@localhost:4321');
 
@@ -58,4 +59,4 @@ is "$u", 'foo://';
 $u.authority(Nil);
 is "$u", 'foo:';
 
-done-testing;
+# vim: expandtab shiftwidth=4

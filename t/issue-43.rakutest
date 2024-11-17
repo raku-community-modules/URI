@@ -1,5 +1,3 @@
-use v6.d;
-
 use Test;
 use URI;
 
@@ -15,3 +13,4 @@ lives-ok { $uri = URI.new($test-uri) }, "create the URI object";
 
 is $uri.Str, $test-uri, "and the URI stringifies to the same as the source";
 
+# vim: expandtab shiftwidth=4

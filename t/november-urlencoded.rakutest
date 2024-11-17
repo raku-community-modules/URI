@@ -1,9 +1,8 @@
-use v6.d;
-
 # lifted more or less completely from the Novemver project
 # just now uses URI::Escape rather than November::CGI
 
 use Test;
+
 use URI::Escape;
 
 my @t =
@@ -31,4 +30,4 @@ for @t {
 
 }
 
-# vim: ft=perl6
+# vim: expandtab shiftwidth=4

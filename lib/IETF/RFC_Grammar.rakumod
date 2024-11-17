@@ -54,3 +54,5 @@ method new(Str $rfc, $grammar?) {
 }
 
 method parse_result { $!parse-result }
+
+# vim: expandtab shiftwidth=4

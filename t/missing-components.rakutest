@@ -1,5 +1,5 @@
-use v6.d;
 use Test;
+
 use URI;
 use IETF::RFC_Grammar::URI;
 
@@ -13,3 +13,5 @@ ok '#foo' ~~ IETF::RFC_Grammar::URI.new().URI-reference, "Relative URIs work";
 ok '' ~~ IETF::RFC_Grammar::URI.new().path-abempty, "path-abempty work";
 nok 'foo:bar_baz' ~~ IETF::RFC_Grammar::URI.new().absolute-URI,
         "absolute-URI covered"
+
+# vim: expandtab shiftwidth=4

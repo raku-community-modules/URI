@@ -57,3 +57,5 @@ method rel2abs(URI::Path:D: Str:D() $base) {
         self.new: :$path;
     }
 }
+
+# vim: expandtab shiftwidth=4

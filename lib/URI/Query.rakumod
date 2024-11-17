@@ -1,4 +1,3 @@
-use v6.d;
 unit class URI::Query
     does Positional
     does Associative
@@ -207,3 +206,4 @@ multi method query-form(URI::Query:D: *@new, *%new) {
 multi method gist(URI::Query:D: --> Str ) { $.query }
 multi method Str(URI::Query:D: --> Str ) { $.gist }
 
+# vim: expandtab shiftwidth=4

@@ -1,6 +1,8 @@
-use v6.d;
 use Test;
+
 use URI :split-query;
+
+plan 24;
 
 constant $qs = 'foo=1&bar=2&foo=3&baz';
 
@@ -258,4 +260,4 @@ subtest {
     is "$q", "foo=1&bar=2&foo=3&baz=";
 }, 'query-form';
 
-done-testing;
+# vim: expandtab shiftwidth=4

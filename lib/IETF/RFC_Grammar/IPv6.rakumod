@@ -1,4 +1,4 @@
-# Taken/Copied with relatively minor translation to Perl6
+# Taken/Copied with relatively minor translation to Raku
 # from RFC 3986 (http://www.ietf.org/rfc/rfc3986.txt)
 
 unit grammar IETF::RFC_Grammar::IPv6:ver<0.02>;
@@ -15,7 +15,7 @@ token IPv6address      {
     [ [ <.sep-h16> ] ** 0..6 <.h16> ]? '::'                                      
 };
 
-    # token avoiding backtracking happiness    
+# token avoiding backtracking happiness    
 token sep-h16           { [ <.h16> ':' <!before ':'>] }
 
 token ls32              { [<.h16> ':' <.h16>] | <.IPv4address> };
@@ -33,4 +33,4 @@ token dec-octet         {
     <.digit>                    # 0 - 9
 }
     
-
+# vim: expandtab shiftwidth=4

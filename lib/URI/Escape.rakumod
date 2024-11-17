@@ -67,18 +67,4 @@ sub uri_unescape(*@to_unesc, Bool :$no_utf8 = False) is export {
     uri-unescape(@to_unesc, no-utf8 => $no_utf8)
 }
 
-=begin pod
-
-=head1 NAME
-
-URI::Escape - Escape and unescape unsafe characters
-
-=head1 SYNOPSIS
-
-    use URI::Escape;
-    
-    my $escaped = uri-escape("10% is enough\n");
-    my $un_escaped = uri-unescape('10%25%20is%20enough%0A');
-
-=end pod
-
+# vim: expandtab shiftwidth=4

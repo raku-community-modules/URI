@@ -1,4 +1,4 @@
-# Taken/Copied with relatively minor translation to Perl6
+# Taken/Copied with relatively minor translation to Raku
 # from RFC 3986 (http://www.ietf.org/rfc/rfc3986.txt)
 
 # Rule names moved from snake case with _ to kebab case with -
@@ -91,3 +91,4 @@ token sub-delims        { <[;!$&'()*+,=]> };
 token uri-alphanum      { <+uri-alpha +:N +:S> };   
 token uri-alpha         { <alpha> };
 
+# vim: expandtab shiftwidth=4

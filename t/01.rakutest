@@ -1,4 +1,3 @@
-use v6.d;
 use Test;
 
 plan 50;
@@ -93,10 +92,10 @@ is($u.frag, 'bar', 'test query and frag capture');
 $u.parse('http://example.com:80/about?foo=cod&foo=trout');
 is($u.query<foo>[1], 'trout', 'query param foo - el 2 without frag');
 
-$u.parse('about/perl6uri?foo=cod&foo=trout#bar');
+$u.parse('about/rakuuri?foo=cod&foo=trout#bar');
 is($u.query<foo>[1], 'trout', 'query param foo - el 2 relative path');
 
-$u.parse('about/perl6uri?foo=cod&foo=trout');
+$u.parse('about/rakuuri?foo=cod&foo=trout');
 is($u.query<foo>[1], 'trout', 'query param foo - el 2 relative path without frag');
 
 throws-like {URI.new('http:://?#?#')}, X::URI::Invalid,
@@ -116,3 +115,4 @@ my Str $user-info = URI.new(
 is( uri-unescape($user-info), 'user,n:deprecatedpwd',
     'extracted userinfo correctly');
 
+# vim: expandtab shiftwidth=4

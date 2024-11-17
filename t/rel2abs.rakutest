@@ -1,4 +1,3 @@
-use v6.d;
 use Test;
 use URI;
 
@@ -21,3 +20,5 @@ is rel2abs("/ccc", "foo:/aaa/bbb"), "foo:/ccc";
 is rel2abs("/ccc", "foo://aaa/bbb"), "foo://aaa/ccc";
 is rel2abs("foo:ccc", "/aaa/bbb"), "foo:ccc";
 is rel2abs("foo:ccc", "foo:/aaa/bbb"), "foo:ccc";
+
+# vim: expandtab shiftwidth=4

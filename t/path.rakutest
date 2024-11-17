@@ -1,6 +1,8 @@
-use v6.d;
 use Test;
+
 use URI;
+
+plan 14;
 
 my $q = URI.new('foo:/a/b/c');
 isa-ok $q.path, URI::Path;
@@ -41,4 +43,4 @@ throws-like {
     $q.path('//a/b/c');
 }, X::URI::Invalid;
 
-done-testing;
+# vim: expandtab shiftwidth=4

@@ -1,3 +1,9 @@
+Revision history for URI
+
+{{$NEXT}}
+    - Fix multi-thread issue
+    - First release using App::Mi6 to make releasing easier
+
 2023-10-17  v0.3.7
 
     * File extensions now follow the Raku conventions
@@ -48,7 +54,7 @@ New features for June 2011 upgrade include:
 
 5) Add 'validating' attribute that, when set to true, tells the URI module to
     fail parsing unless the entire string it is asked to parse is a URI.
-    Default is to provide Perl 5 URI behavior and just try to parse URI from
+    Default is to provide Perl URI behavior and just try to parse URI from
     passed parse string.  "is_validating"" attribute can be set as named param
     to new.
 

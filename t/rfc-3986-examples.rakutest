@@ -1,8 +1,9 @@
-use v6.d;
 use Test;
-plan 25;
 
 use URI;
+
+plan 25;
+
 my $u = URI.new('ftp://ftp.is.co.za/rfc/rfc1808.txt', :validating<1>);
 is($u.scheme, 'ftp', 'ftp scheme');
 is($u.host, 'ftp.is.co.za', 'ftp host');
@@ -46,3 +47,4 @@ $u.parse('urn:oasis:names:specification:docbook:dtd:xml:4.1.2');
 is($u.scheme, 'urn', 'urn scheme');
 is($u.path, 'oasis:names:specification:docbook:dtd:xml:4.1.2', 'urn path');
 
+# vim: expandtab shiftwidth=4
