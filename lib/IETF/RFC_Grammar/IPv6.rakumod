@@ -1,7 +1,7 @@
 # Taken/Copied with relatively minor translation to Raku
 # from RFC 3986 (http://www.ietf.org/rfc/rfc3986.txt)
 
-unit grammar IETF::RFC_Grammar::IPv6:ver<0.02>;
+unit grammar IETF::RFC_Grammar::IPv6:ver<0.3.8>;
 
 token IPv6address      {
                                             [ <.h16> ':' ] ** 6 <.ls32> |

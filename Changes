@@ -1,8 +1,15 @@
 Revision history for URI
 
 {{$NEXT}}
+
+0.3.8  2024-11-17T13:48:28+01:00
     - Fix multi-thread issue
     - First release using App::Mi6 to make releasing easier
+    - Modernized test file extensions
+    - Added CI for each OS separately
+    - Moved documentation to a separate file
+    - Did a light editor run on the documentation, modernizing
+      code blocks and signature information
 
 2023-10-17  v0.3.7
 
